@@ -1,98 +1,128 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [form, setForm] = useState({
+    firstname: '',
+    middlename: '',
+    lastname: '',
+    age: '',
+    gender: '',
+  });
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const [users, setUsers] = useState([])
+
+  const setChange = (field) => (value) => {
+    setForm({...form, [field]: value })
+  };
+
+  const addUsers = () => {
+    const updatedUsers = [...users, form];
+    
+    setUsers(updatedUsers);
+
+    console.log(`First Name: ${form.firstname}`);
+    console.log(`Middle Name: ${form.middlename}`);
+    console.log(`Last Name: ${form.lastname}`);
+    console.log(`Age: ${form.age}`);
+    console.log(`Gender: ${form.gender}`);
+  };
+
+  return (
+    <View style={styles.Container}>
+      <View style={styles.formContainer}>
+        <Text>First Name:</Text>
+        <TextInput 
+          style={styles.textInput} 
+          placeholder= "Juan"
+          placeholderTextColor="gray"
+          onChangeText={setChange('firstname')}
+        />
+
+        <Text>Middle Name:</Text>
+        <TextInput 
+          style={styles.textInput} 
+          placeholder= "Dela"
+          placeholderTextColor="gray"
+          onChangeText={setChange('middlename')}
+        />
+
+        <Text>Last Name:</Text>
+        <TextInput 
+          style={styles.textInput} 
+          placeholder= "Cruz"
+          placeholderTextColor="gray"
+          onChangeText={setChange('lastname')}
+        />
+
+        <Text>Age:</Text>
+        <TextInput 
+          style={styles.textInput} 
+          placeholder= "42"
+          placeholderTextColor="gray"
+          onChangeText={setChange('age')}
+        />
+
+        <Text>Gender:</Text>
+        <TextInput 
+          style={styles.textInput} 
+          placeholder= "Male"
+          placeholderTextColor="gray"
+          onChangeText={setChange('gender')}
+        />
+
+        <Pressable style={styles.button} onPress={addUsers}>
+          <Text>Submit</Text>
+        </Pressable>
+      </View>
+    </View>
+
+
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  Container: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
+    backgroundColor: 'lightgray',
+    padding: 2,
   },
-  stepContainer: {
+
+  formContainer: {
+    justifyContent: 'center',
+    padding: 16,        
+    backgroundColor: 'white',
+    borderColor: 'black',
+    borderWidth: 1,
+    borderRadius: 12,
+    alignSelf: 'center',
     gap: 8,
-    marginBottom: 8,
+    shadowColor: 'gray',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+
+  textInput: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    textAlign: 'center',
+    padding: 2,
+    borderColor: 'black',
+    borderWidth: 2,
+    alignSelf: 'center',
   },
+
+  button: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    textAlign: 'center',
+    padding: 6,
+    borderColor: 'black',
+    borderWidth: 2,
+    alignSelf: 'center',
+    backgroundColor: 'lightgray',
+    borderRadius: 6,
+  }
 });
