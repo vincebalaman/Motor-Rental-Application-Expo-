@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 
 export default function HomeScreen() {
@@ -22,6 +22,7 @@ export default function HomeScreen() {
     
     setUsers(updatedUsers);
 
+    Alert.alert('Account Registered', 'Your account has been registered');
     console.log(`First Name: ${form.firstname}`);
     console.log(`Middle Name: ${form.middlename}`);
     console.log(`Last Name: ${form.lastname}`);
