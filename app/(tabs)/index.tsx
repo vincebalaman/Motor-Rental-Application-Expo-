@@ -1,129 +1,137 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-
-export default function HomeScreen() {
-  const [form, setForm] = useState({
-    firstname: '',
-    middlename: '',
-    lastname: '',
-    age: '',
-    gender: '',
-  });
-
-  const [users, setUsers] = useState([])
-
-  const setChange = (field) => (value) => {
-    setForm({...form, [field]: value })
-  };
-
-  const addUsers = () => {
-    const updatedUsers = [...users, form];
-    
-    setUsers(updatedUsers);
-
-    Alert.alert('Account Registered', 'Your account has been registered');
-    console.log(`First Name: ${form.firstname}`);
-    console.log(`Middle Name: ${form.middlename}`);
-    console.log(`Last Name: ${form.lastname}`);
-    console.log(`Age: ${form.age}`);
-    console.log(`Gender: ${form.gender}`);
+export default function RegisterScreen() {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const handleCreateAccount = () => {
+    Alert.alert('Account Registered', 'Your account has been created successfully.');
+    console.log('Full Name:', fullName);
+    console.log('Email:', email);
+    console.log('Password:', password);
+    console.log('Confirm Password:', confirmPassword);
   };
 
   return (
-    <View style={styles.Container}>
-      <View style={styles.formContainer}>
-        <Text>First Name:</Text>
-        <TextInput 
-          style={styles.textInput} 
-          placeholder= "Juan"
-          placeholderTextColor="gray"
-          onChangeText={setChange('firstname')}
-        />
+    <View style={styles.container}>
+      <Text style={styles.title}>Create Account</Text>
+      <Text style={styles.subtitle}>Sign up to start renting motors:</Text>
 
-        <Text>Middle Name:</Text>
-        <TextInput 
-          style={styles.textInput} 
-          placeholder= "Dela"
-          placeholderTextColor="gray"
-          onChangeText={setChange('middlename')}
-        />
+      <View style={styles.form}>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Full Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your full name"
+            placeholderTextColor="#94a3b8"
+            value={fullName}
+            onChangeText={setFullName}
+          />
+        </View>
 
-        <Text>Last Name:</Text>
-        <TextInput 
-          style={styles.textInput} 
-          placeholder= "Cruz"
-          placeholderTextColor="gray"
-          onChangeText={setChange('lastname')}
-        />
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Email Address</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your email address"
+            placeholderTextColor="#94a3b8"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
 
-        <Text>Age:</Text>
-        <TextInput 
-          style={styles.textInput} 
-          placeholder= "42"
-          placeholderTextColor="gray"
-          onChangeText={setChange('age')}
-        />
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your password"
+            placeholderTextColor="#94a3b8"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+        </View>
 
-        <Text>Gender:</Text>
-        <TextInput 
-          style={styles.textInput} 
-          placeholder= "Male"
-          placeholderTextColor="gray"
-          onChangeText={setChange('gender')}
-        />
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Confirm Password</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Re-enter your password"
+            placeholderTextColor="#94a3b8"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+          />
+        </View>
 
-        <Pressable style={styles.button} onPress={addUsers}>
-          <Text>Submit</Text>
-        </Pressable>
+        <TouchableOpacity style={styles.button} onPress={handleCreateAccount}>
+          <Text style={styles.buttonText}>Create Account</Text>
+        </TouchableOpacity>
       </View>
     </View>
-
-
   );
 }
 
 const styles = StyleSheet.create({
-  Container: {
+  container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'lightgray',
-    padding: 2,
+    backgroundColor: '#f8fafc',
+    padding: 24,
+    paddingTop: 60,
   },
-
-  formContainer: {
-    justifyContent: 'center',
-    padding: 16,        
-    backgroundColor: 'white',
-    borderColor: 'black',
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 28,
+  },
+  form: {
+    gap: 16,
+  },
+  fieldGroup: {
+    gap: 6,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+    marginLeft: 2,
+  },
+  input: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: '#0f172a',
     borderWidth: 1,
-    borderRadius: 12,
-    alignSelf: 'center',
-    gap: 8,
-    shadowColor: 'gray',
+    borderColor: '#e2e8f0',
   },
-
-  textInput: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    textAlign: 'center',
-    padding: 2,
-    borderColor: 'black',
-    borderWidth: 2,
-    alignSelf: 'center',
-  },
-
   button: {
-    justifyContent: 'center',
+    backgroundColor: '#3b82f6',
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: 'center',
-    textAlign: 'center',
-    padding: 6,
-    borderColor: 'black',
-    borderWidth: 2,
-    alignSelf: 'center',
-    backgroundColor: 'lightgray',
-    borderRadius: 6,
-  }
+    marginTop: 16,
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
 });
