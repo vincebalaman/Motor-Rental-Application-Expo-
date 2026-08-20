@@ -59,4 +59,3 @@ A mobile application built with **React Native + Expo** for our **Mobile Program
 | Layer | Technology |
 |-------|-----------|
 | Framework | React Native + Expo |
-|
