@@ -1,50 +1,62 @@
-# Welcome to your Expo app 👋
+# 🏍️ Motor Rental Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile application built with **React Native + Expo** for our **Mobile Programming** subject. The app allows users to browse, book, and manage motor rentals — with an admin panel for managing listings and bookings.
 
-## Get started
+---
 
-1. Install dependencies
+## 👨‍💻 Team Members
 
-   ```bash
-   npm install
-   ```
+| Name | GitHub | Role |
+|------|--------|------|
+| Vince Jaliel Balaman | [@vincebalaman](https://github.com/vincebalaman) | Developer |
+| Micheal Tim Joseph Enriquez | [@michealtimjoseph](https://github.com/michealtimjoseph) | Developer |
+| Ella Stephanie Culaste | [@culasteellastephanie18-coder](https://github.com/culasteellastephanie18-coder) | Developer |
 
-2. Start the app
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## 📱 Features
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 🔐 Authentication & User Management
+- User Registration (Create Account)
+- User Login / Logout
+- User Profile Page (name, photo, contact info)
+- Change Password
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### 🏍️ Motor Listings
+- Browse all available motors (name, photo, type, price per day)
+- Motor detail page (specs, availability, rental shop info)
+- Search motors by name or type
+- Filter by price range and availability
 
-## Get a fresh project
+### 📅 Booking System
+- Select rental dates with a date picker (start & end date)
+- Booking confirmation screen with price summary
+- View booking history (Active, Completed, Cancelled)
+- Cancel a booking
 
-When you're ready, run:
+### 💳 Payment
+- Price breakdown and total before confirming
+- Mock payment / "Pay on Pickup" option
 
-```bash
-npm run reset-project
-```
+### ⭐ Reviews & Ratings
+- Rate and review a motor after rental
+- View average rating and reviews per motor
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 🔔 Notifications
+- In-app alerts for booking confirmation
+- Rental reminder notifications
 
-## Learn more
+### 🛠️ Admin Panel
+- Add, edit, and delete motor listings
+- View and manage all bookings
+- Dashboard overview (total rentals, available units, revenue)
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 🛠️ Tech Stack
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+| Layer | Technology |
+|-------|-----------|
+| Framework | React Native + Expo |
+|
