@@ -11,7 +11,7 @@ A mobile application built with **React Native + Expo** for our **Mobile Program
 | Vince Jaliel Balaman | [@vincebalaman](https://github.com/vincebalaman) | Developer |
 | Micheal Tim Joseph Enriquez | [@michealtimjoseph](https://github.com/michealtimjoseph) | Developer |
 | Ella Stephanie Culaste | [@culasteellastephanie18-coder](https://github.com/culasteellastephanie18-coder) | Developer |
-
+| Patrick Louise Casiño | [@userpat19](https://github.com/userpat19) | Developer |
 
 ---
 
