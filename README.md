@@ -6,7 +6,7 @@ A mobile application built with **React Native + Expo** for our **Mobile Program
 
 **IMPORTANT** 
 
-the main branch has been override to update the project to SDK 57, members need to sync their local repos after the force push
+the main branch has been overriden to update the project to SDK 57, members need to sync their local repos after the force push
 
 1. Fetch the updated remote state:
 
