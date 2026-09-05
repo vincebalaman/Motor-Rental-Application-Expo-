@@ -12,21 +12,25 @@ the main branch has been override to update the project to SDK 57, members need 
 
 ```bash
 git fetch origin
+```
 
 2. Switch to the main branch:
 
 ```bash
 git checkout main
+```
 
 3. Hard reset local main to match remote main:
 
 ```bash
 git reset --hard origin/main
+```
 
 4. Verify
 
 ```bash
 git status
+```
 
 ---
 
