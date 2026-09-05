@@ -1,17 +1,34 @@
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { loginUser } from '@/database/auth';
+
 export default function LoginScreen() {
+  const database = useSQLiteContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Missing Fields', 'Please enter your email and password.');
       return;
     }
-    Alert.alert('Login Successful', `Welcome back!`);
+    setIsSubmitting(true);
+    try {
+      const user = await loginUser(database, email, password);
+      if (!user) {
+        Alert.alert('Login Failed', 'The email or password is incorrect.');
+        return;
+      }
+      router.replace('/dashboard');
+    } catch {
+      Alert.alert('Login Failed', 'We could not sign you in. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -45,12 +62,12 @@ export default function LoginScreen() {
           />
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Log In</Text>
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isSubmitting}>
+          <Text style={styles.buttonText}>{isSubmitting ? 'Signing In...' : 'Log In'}</Text>
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Text style={styles.footerText}>Do not have an account? </Text>
           <Link href="/auth/register">
             <Text style={styles.footerLink}>Sign Up</Text>
           </Link>

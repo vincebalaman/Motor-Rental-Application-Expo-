@@ -1,35 +1,37 @@
 import { Link, router } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { createUser } from '@/database/auth';
+
 export default function RegisterScreen() {
+  const database = useSQLiteContext();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleCreateAccount = () => {
-  if (!fullName || !email || !password || !confirmPassword) {
-    Alert.alert('Missing Fields', 'Please fill in all fields.');
-    return;
-  }
+  const handleCreateAccount = async () => {
+    if (!fullName || !email || !password || !confirmPassword) {
+      Alert.alert('Missing Fields', 'Please fill in all fields.');
+      return;
+    }
 
-  if (password !== confirmPassword) {
-    Alert.alert('Password Mismatch', 'Passwords do not match.');
-    return;
-  }
+    if (password !== confirmPassword) {
+      Alert.alert('Password Mismatch', 'Passwords do not match.');
+      return;
+    }
 
-  Alert.alert(
-    'Account Registered',
-    'Your account has been created successfully.',
-    [
-      {
-        text: 'Continue',
-        onPress: () => router.replace('/auth/login'),
-      },
-    ]
-  );
-};
+    try {
+      await createUser(database, fullName, email, password);
+      Alert.alert('Account Registered', 'Your account has been created successfully.', [
+        { text: 'Continue', onPress: () => router.replace('/auth/login') },
+      ]);
+    } catch {
+      Alert.alert('Registration Failed', 'An account with this email already exists.');
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
