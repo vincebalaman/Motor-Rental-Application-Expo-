@@ -62,8 +62,14 @@ export default function LoginScreen() {
           />
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isSubmitting}>
-          <Text style={styles.buttonText}>{isSubmitting ? 'Signing In...' : 'Log In'}</Text>
+        <View style={styles.forgotPassword}>
+          <Link href="/auth/forgot-password">
+            <Text style={styles.footerLink}>Forgot Password?</Text>
+          </Link>
+        </View>
+
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>Log In</Text>
         </TouchableOpacity>
 
         <View style={styles.footer}>
@@ -142,5 +148,10 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     fontWeight: '600',
     fontSize: 14,
+  },
+
+  forgotPassword: {
+  alignItems: 'flex-end',
+  marginTop: -8,
   },
 });
