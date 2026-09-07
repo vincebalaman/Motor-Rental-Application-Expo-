@@ -7,12 +7,7 @@ interface SubmitButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export default function CustomButton({
-  title,
-  onPress,
-  isSubmitting = false,
-  style,
-}: CustomButtonProps) {
+export default function SubmitButton({title, onPress, isSubmitting = false, style,}: SubmitButtonProps) {
   return (
     <Pressable
       style={[styles.button, style, isSubmitting && styles.buttonDisabled]}
