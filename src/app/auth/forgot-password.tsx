@@ -26,7 +26,7 @@ export default function ForgotPasswordScreen() {
         <Text style={styles.title}>Forgot Password?</Text>
 
         <Text style={styles.subtitle}>
-          Enter your email address and we’ll send you a verification code.
+          Enter your email address below and we'll send you a verification code to reset your password.
         </Text>
 
         <View style={styles.form}>
