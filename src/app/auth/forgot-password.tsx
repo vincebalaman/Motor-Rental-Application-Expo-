@@ -1,14 +1,9 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import MainSafe from '@/components/mainsafe';
+import SubmitButton from '@/components/submitbtn';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -26,51 +21,48 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Forgot Password?</Text>
+    <MainSafe>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Forgot Password?</Text>
 
-      <Text style={styles.subtitle}>
-        Enter your email address and we’ll send you a verification code.
-      </Text>
+        <Text style={styles.subtitle}>
+          Enter your email address and we’ll send you a verification code.
+        </Text>
 
-      <View style={styles.form}>
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Email Address</Text>
+        <View style={styles.form}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Email Address</Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email address"
-            placeholderTextColor="#94a3b8"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email address"
+              placeholderTextColor="#94a3b8"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <SubmitButton title="SEND VERIFICATION CODE" 
+          onPress={handleSendVerification} />
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Remember your password? </Text>
+
+            <Link href="/auth/login">
+              <Text style={styles.footerLink}>Log In</Text>
+            </Link>
+          </View>
         </View>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleSendVerification}
-        >
-          <Text style={styles.buttonText}>Send Verification</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Remember your password? </Text>
-
-          <Link href="/auth/login">
-            <Text style={styles.footerLink}>Log In</Text>
-          </Link>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </MainSafe>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#f8fafc',
     padding: 24,
     paddingTop: 60,
   },

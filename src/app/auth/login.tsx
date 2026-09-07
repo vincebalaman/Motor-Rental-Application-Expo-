@@ -1,8 +1,10 @@
 import { Link, router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import MainSafe from '@/components/mainsafe';
+import SubmitButton from '@/components/submitbtn';
 import { loginUser } from '@/database/auth';
 
 export default function LoginScreen() {
@@ -32,61 +34,61 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Log in to your account to continue</Text>
+    <MainSafe>
+      <View style={styles.container}>
+        <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.subtitle}>Log in to your account to continue</Text>
 
-      <View style={styles.form}>
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Email Address</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email address"
-            placeholderTextColor="#94a3b8"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
+        <View style={styles.form}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email address"
+              placeholderTextColor="#94a3b8"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            placeholderTextColor="#94a3b8"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your password"
+              placeholderTextColor="#94a3b8"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
 
-        <View style={styles.forgotPassword}>
-          <Link href="/auth/forgot-password">
-            <Text style={styles.footerLink}>Forgot Password?</Text>
-          </Link>
-        </View>
+          <View style={styles.forgotPassword}>
+            <Link href="/auth/forgot-password">
+              <Text style={styles.footerLink}>Forgot Password?</Text>
+            </Link>
+          </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Log In</Text>
-        </TouchableOpacity>
+          <SubmitButton title="LOG IN" 
+          onPress={handleLogin}/>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Do not have an account? </Text>
-          <Link href="/auth/register">
-            <Text style={styles.footerLink}>Sign Up</Text>
-          </Link>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Do not have an account? </Text>
+            <Link href="/auth/register">
+              <Text style={styles.footerLink}>Sign Up</Text>
+            </Link>
+          </View>
         </View>
       </View>
-    </View>
+    </MainSafe>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
     padding: 24,
     paddingTop: 60,
   },

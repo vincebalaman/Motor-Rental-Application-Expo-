@@ -1,20 +1,10 @@
 import { Link, router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import MainSafe from "@/components/mainsafe";
+import SubmitButton from "@/components/submitbtn";
 import { createUser } from "@/database/auth";
 
 export default function RegisterScreen() {
@@ -99,7 +89,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+    <MainSafe>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -270,18 +260,11 @@ export default function RegisterScreen() {
               </Text>
             </Pressable>
 
-            <Pressable
-              style={[styles.button, isSubmitting && styles.buttonDisabled]}
-              onPress={handleCreateAccount}
-              disabled={isSubmitting}
-              accessibilityRole="button"
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#f7f2e8" />
-              ) : (
-                <Text style={styles.buttonText}>CREATE ACCOUNT →</Text>
-              )}
-            </Pressable>
+            <SubmitButton 
+            title="CREATE ACCOUNT →" 
+            onPress={handleCreateAccount} 
+            isSubmitting={isSubmitting}
+            />
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
@@ -293,7 +276,7 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </MainSafe>
   );
 }
 
@@ -470,24 +453,6 @@ const styles = StyleSheet.create({
     color: "#756f63",
     fontSize: 12,
     lineHeight: 17,
-  },
-  button: {
-    backgroundColor: "#21484a",
-    minHeight: 54,
-    paddingVertical: 16,
-    borderRadius: 4,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 5,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: "#f7f2e8",
-    fontWeight: "900",
-    fontSize: 12,
-    letterSpacing: 1.4,
   },
   footer: {
     flexDirection: "row",
