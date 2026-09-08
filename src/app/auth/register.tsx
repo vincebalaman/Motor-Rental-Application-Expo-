@@ -183,7 +183,12 @@ export default function RegisterScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
-                  autoComplete="new-password"
+                  textContentType={Platform.OS === "ios" ? "none" : undefined}
+                  autoComplete="off"
+                  importantForAutofill="no"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="default"
                   returnKeyType="next"
                   onFocus={() => setFocusedField("password")}
                   onBlur={() => setFocusedField(null)}
@@ -218,7 +223,12 @@ export default function RegisterScreen() {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
-                  autoComplete="new-password"
+                  textContentType={Platform.OS === "ios" ? "none" : undefined}
+                  autoComplete="off"
+                  importantForAutofill="no"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="default"
                   returnKeyType="done"
                   onSubmitEditing={handleCreateAccount}
                   onFocus={() => setFocusedField("confirmPassword")}
