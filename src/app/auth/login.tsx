@@ -71,7 +71,8 @@ export default function LoginScreen() {
             </Link>
           </View>
 
-          <SubmitButton title="LOG IN" 
+          <SubmitButton title="LOG IN"
+          isSubmitting={isSubmitting}
           onPress={handleLogin}/>
 
           <View style={styles.footer}>
