@@ -6,7 +6,7 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import MainSafe from '@/components/mainsafe';
 import { getCurrentUser, logoutUser, type AuthUser } from '@/database/auth';
 
-export default function DashboardScreen() {
+export default function AccountScreen() {
   const database = useSQLiteContext();
   const [user, setUser] = useState<AuthUser | null>(null);
 
@@ -36,24 +36,15 @@ export default function DashboardScreen() {
   return (
     <MainSafe>
       <View style={styles.container}>
-        <View style={{alignItems: 'flex-start', marginBottom: 24}}>
+        <View style={{alignItems: 'flex-end', marginBottom: 24}}>
           <TouchableOpacity onPress= {() => router.push('/account')}>
-            <Text>😋</Text>
             <Text>Account</Text>
           </TouchableOpacity>
         </View>
         <View>
-          <Text style={styles.eyebrow}>MOTORRENT DASHBOARD</Text>
-          <Text style={styles.title}>Welcome, {user.fullName}</Text>
-          <Text style={styles.subtitle}>Your next ride is ready to be discovered.</Text>
-        </View>
-
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Start your journey</Text>
-          <Text style={styles.panelText}>Browse available motors and find a ride that fits your plans.</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/explore')}>
-            <Text style={styles.primaryButtonText}>Explore Motors</Text>
-          </TouchableOpacity>
+          <Text style={styles.subtitle}>Full Name: {user.fullName}</Text>
+          <Text style={styles.subtitle}>Email: {user.email}</Text>
+          <Text style={styles.subtitle}>Change Password</Text>
         </View>
 
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>

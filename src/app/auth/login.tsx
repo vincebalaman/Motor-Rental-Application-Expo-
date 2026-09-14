@@ -1,8 +1,9 @@
 import { Link, router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
+import Input from '@/components/input';
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { loginUser } from '@/database/auth';
@@ -12,6 +13,11 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPasswordHidden, setIsPasswordHidden] = useState(true);
+
+  const togglePasswordVisibility = () => {
+    setIsPasswordHidden(!isPasswordHidden);
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -42,7 +48,7 @@ export default function LoginScreen() {
         <View style={styles.form}>
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Email Address</Text>
-            <TextInput
+            <Input
               style={styles.input}
               placeholder="Enter your email address"
               placeholderTextColor="#94a3b8"
@@ -55,13 +61,14 @@ export default function LoginScreen() {
 
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
+            <Input
               placeholder="Enter your password"
               placeholderTextColor="#94a3b8"
               value={password}
               onChangeText={setPassword}
-              secureTextEntry
+              type="password"
+              isHidden={isPasswordHidden}
+              togglePasswordVisibility={togglePasswordVisibility}
             />
           </View>
 

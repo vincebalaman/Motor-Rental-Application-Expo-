@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 
+import Input from "@/components/input";
 import MainSafe from "@/components/mainsafe";
 import SubmitButton from "@/components/submitbtn";
 import { createUser } from "@/database/auth";
@@ -26,6 +27,11 @@ export default function RegisterScreen() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [isPasswordHidden, setIsPasswordHidden] = useState(true);
+
+  const togglePasswordVisibility = () => {
+    setIsPasswordHidden(!isPasswordHidden);
+  };
 
   const handleCreateAccount = async () => {
     const normalizedName = fullName.trim();
@@ -171,18 +177,13 @@ export default function RegisterScreen() {
 
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  focusedField === "password" && styles.inputFocused,
-                ]}
-                placeholder="8+ characters, one number"
-                placeholderTextColor="#9a9b91"
+              <Input
                 value={password}
+                placeholder="Create a password"
+                type="password"
                 onChangeText={setPassword}
-                secureTextEntry
-                autoComplete="new-password"
-                autoCapitalize="none"
+                isHidden={isPasswordHidden}
+                togglePasswordVisibility={togglePasswordVisibility}
                 autoCorrect={false}
                 returnKeyType="next"
                 onFocus={() => setFocusedField("password")}
@@ -192,18 +193,13 @@ export default function RegisterScreen() {
 
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Confirm password</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  focusedField === "confirmPassword" && styles.inputFocused,
-                ]}
+              <Input
                 placeholder="Re-enter your password"
-                placeholderTextColor="#9a9b91"
                 value={confirmPassword}
+                type="password"
                 onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoComplete="new-password"
-                autoCapitalize="none"
+                isHidden={isPasswordHidden}
+                togglePasswordVisibility={togglePasswordVisibility}
                 autoCorrect={false}
                 returnKeyType="done"
                 onSubmitEditing={handleCreateAccount}
