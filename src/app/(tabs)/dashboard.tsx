@@ -36,12 +36,6 @@ export default function DashboardScreen() {
   return (
     <MainSafe>
       <View style={styles.container}>
-        <View style={{alignItems: 'flex-start', marginBottom: 24}}>
-          <TouchableOpacity onPress= {() => router.push('/account')}>
-            <Text>😋</Text>
-            <Text>Account</Text>
-          </TouchableOpacity>
-        </View>
         <View>
           <Text style={styles.eyebrow}>MOTORRENT DASHBOARD</Text>
           <Text style={styles.title}>Welcome, {user.fullName}</Text>
@@ -51,7 +45,7 @@ export default function DashboardScreen() {
         <View style={styles.panel}>
           <Text style={styles.panelTitle}>Start your journey</Text>
           <Text style={styles.panelText}>Browse available motors and find a ride that fits your plans.</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/explore')}>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => router.navigate('/explore')}>
             <Text style={styles.primaryButtonText}>Explore Motors</Text>
           </TouchableOpacity>
         </View>
