@@ -31,7 +31,7 @@ export default function LoginScreen() {
         Alert.alert('Login Failed', 'The email or password is incorrect.');
         return;
       }
-      router.replace('/dashboard');
+      router.replace('../dashboard');
     } catch {
       Alert.alert('Login Failed', 'We could not sign you in. Please try again.');
     } finally {
