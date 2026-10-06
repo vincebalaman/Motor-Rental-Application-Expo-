@@ -2,7 +2,6 @@ import { Link, router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -13,8 +12,9 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import MainSafe from "@/components/mainsafe";
+import SubmitButton from "@/components/submitbtn";
 import { createUser } from "@/database/auth";
 
 export default function RegisterScreen() {
@@ -23,8 +23,6 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -35,10 +33,7 @@ export default function RegisterScreen() {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!normalizedName || !normalizedEmail || !password || !confirmPassword) {
-      Alert.alert(
-        "Missing details",
-        "Please complete every field to continue.",
-      );
+      Alert.alert("Missing details", "Please complete every field to continue.");
       return;
     }
 
@@ -99,7 +94,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+    <MainSafe>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -125,17 +120,13 @@ export default function RegisterScreen() {
             </View>
             <View>
               <Text style={styles.brandName}>MOTOR RENTAL</Text>
-              <Text style={styles.brandTagline}>
-                YOUR NEXT RIDE STARTS HERE
-              </Text>
+              <Text style={styles.brandTagline}>YOUR NEXT RIDE STARTS HERE</Text>
             </View>
           </View>
 
           <Text style={styles.eyebrow}>JOIN THE JOURNEY</Text>
           <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.subtitle}>
-            Book a ride, take the long way home.
-          </Text>
+          <Text style={styles.subtitle}>Book a ride, take the long way home.</Text>
 
           <View style={styles.form}>
             <View style={styles.fieldGroup}>
@@ -180,75 +171,45 @@ export default function RegisterScreen() {
 
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Password</Text>
-              <View
+              <TextInput
                 style={[
-                  styles.inputShell,
+                  styles.input,
                   focusedField === "password" && styles.inputFocused,
                 ]}
-              >
-                <TextInput
-                  style={styles.inputWithAction}
-                  placeholder="8+ characters, one number"
-                  placeholderTextColor="#9a9b91"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoComplete="new-password"
-                  returnKeyType="next"
-                  onFocus={() => setFocusedField("password")}
-                  onBlur={() => setFocusedField(null)}
-                />
-                <Pressable
-                  style={styles.visibilityButton}
-                  onPress={() => setShowPassword((visible) => !visible)}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    showPassword ? "Hide password" : "Show password"
-                  }
-                >
-                  <Text style={styles.visibilityText}>
-                    {showPassword ? "HIDE" : "SHOW"}
-                  </Text>
-                </Pressable>
-              </View>
+                placeholder="8+ characters, one number"
+                placeholderTextColor="#9a9b91"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoComplete="new-password"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="next"
+                onFocus={() => setFocusedField("password")}
+                onBlur={() => setFocusedField(null)}
+              />
             </View>
 
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Confirm password</Text>
-              <View
+              <TextInput
                 style={[
-                  styles.inputShell,
+                  styles.input,
                   focusedField === "confirmPassword" && styles.inputFocused,
                 ]}
-              >
-                <TextInput
-                  style={styles.inputWithAction}
-                  placeholder="Re-enter your password"
-                  placeholderTextColor="#9a9b91"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  autoComplete="new-password"
-                  returnKeyType="done"
-                  onSubmitEditing={handleCreateAccount}
-                  onFocus={() => setFocusedField("confirmPassword")}
-                  onBlur={() => setFocusedField(null)}
-                />
-                <Pressable
-                  style={styles.visibilityButton}
-                  onPress={() => setShowConfirmPassword((visible) => !visible)}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    showConfirmPassword
-                      ? "Hide confirmed password"
-                      : "Show confirmed password"
-                  }
-                >
-                  <Text style={styles.visibilityText}>
-                    {showConfirmPassword ? "HIDE" : "SHOW"}
-                  </Text>
-                </Pressable>
-              </View>
+                placeholder="Re-enter your password"
+                placeholderTextColor="#9a9b91"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoComplete="new-password"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="done"
+                onSubmitEditing={handleCreateAccount}
+                onFocus={() => setFocusedField("confirmPassword")}
+                onBlur={() => setFocusedField(null)}
+              />
             </View>
 
             <Pressable
@@ -263,25 +224,20 @@ export default function RegisterScreen() {
                   acceptedTerms && styles.checkboxChecked,
                 ]}
               >
-                {acceptedTerms ? <Text style={styles.checkmark}>✓</Text> : null}
+                {acceptedTerms ? (
+                  <Text style={styles.checkmark}>✓</Text>
+                ) : null}
               </View>
               <Text style={styles.termsText}>
                 I agree to the rental terms and privacy policy.
               </Text>
             </Pressable>
 
-            <Pressable
-              style={[styles.button, isSubmitting && styles.buttonDisabled]}
+            <SubmitButton
+              title="CREATE ACCOUNT →"
               onPress={handleCreateAccount}
-              disabled={isSubmitting}
-              accessibilityRole="button"
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#f7f2e8" />
-              ) : (
-                <Text style={styles.buttonText}>CREATE ACCOUNT →</Text>
-              )}
-            </Pressable>
+              isSubmitting={isSubmitting}
+            />
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
@@ -293,7 +249,7 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </MainSafe>
   );
 }
 
@@ -409,37 +365,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#d9d2c4",
   },
-  inputShell: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#faf8f2",
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#d9d2c4",
-  },
   inputFocused: {
     borderColor: "#c0783e",
     shadowColor: "#c0783e",
     shadowOpacity: 0.12,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
-  },
-  inputWithAction: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 15,
-    fontSize: 15,
-    color: "#203334",
-  },
-  visibilityButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  visibilityText: {
-    color: "#c0783e",
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.8,
   },
   termsRow: {
     flexDirection: "row",
@@ -470,24 +401,6 @@ const styles = StyleSheet.create({
     color: "#756f63",
     fontSize: 12,
     lineHeight: 17,
-  },
-  button: {
-    backgroundColor: "#21484a",
-    minHeight: 54,
-    paddingVertical: 16,
-    borderRadius: 4,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 5,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: "#f7f2e8",
-    fontWeight: "900",
-    fontSize: 12,
-    letterSpacing: 1.4,
   },
   footer: {
     flexDirection: "row",
