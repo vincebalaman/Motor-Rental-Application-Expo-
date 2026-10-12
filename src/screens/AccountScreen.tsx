@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -36,15 +36,13 @@ export default function AccountScreen() {
   return (
     <MainSafe>
       <View style={styles.container}>
-        <View style={{alignItems: 'flex-end', marginBottom: 24}}>
-          <TouchableOpacity onPress= {() => router.push('/account')}>
-            <Text>Account</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.title}>Account Details</Text>
         <View>
           <Text style={styles.subtitle}>Full Name: {user.fullName}</Text>
           <Text style={styles.subtitle}>Email: {user.email}</Text>
-          <Text style={styles.subtitle}>Change Password</Text>
+          <Link style={styles.subtitle} href="/account/change-password">
+            Change Password
+          </Link>
         </View>
 
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
@@ -57,7 +55,7 @@ export default function AccountScreen() {
 
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
-  container: { flex: 1, justifyContent: 'space-between', padding: 24, paddingTop: 64 },
+  container: { flex: 1, justifyContent: 'space-between', padding: 24, paddingTop: 64, borderColor: 'black', borderWidth: 1, borderRadius: 8 },
   eyebrow: { color: '#2563eb', fontSize: 12, fontWeight: '700', letterSpacing: 1.4, marginBottom: 12 },
   title: { color: '#0f172a', fontSize: 30, fontWeight: '700', marginBottom: 8 },
   subtitle: { color: '#64748b', fontSize: 16, lineHeight: 24 },
