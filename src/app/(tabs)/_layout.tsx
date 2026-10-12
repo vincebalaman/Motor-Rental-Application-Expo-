@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { Text } from 'react-native';
 
 export default function TabsLayout() {
   return (
@@ -14,7 +14,7 @@ export default function TabsLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" color={color} size={size} />
+            <Text style={{ color, fontSize: size }}>⌂</Text>
           ),
         }}
       />
@@ -23,7 +23,7 @@ export default function TabsLayout() {
         options={{
           title: 'Explore',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="compass" color={color} size={size} />
+            <Text style={{ color, fontSize: size }}>◎</Text>
           ),
         }}
       />
@@ -32,7 +32,7 @@ export default function TabsLayout() {
         options={{
           title: 'Account',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" color={color} size={size} />
+            <Text style={{ color, fontSize: size }}>👤</Text>
           ),
         }}
       />

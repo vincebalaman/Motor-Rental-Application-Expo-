@@ -31,5 +31,5 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#0f172a', borderRadius: 16, padding: 20 },
   name: { color: '#ffffff', fontSize: 18, fontWeight: '700' },
   type: { color: '#cbd5e1', fontSize: 14, marginTop: 4 },
-  price: { color: '#60a5fa', fontSize: 15, fontWeight: '700', marginTop: 8 },
+  price: { color: '#ffffff', fontSize: 15, fontWeight: '700', marginTop: 8 },
 });

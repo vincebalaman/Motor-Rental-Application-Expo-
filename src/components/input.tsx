@@ -6,7 +6,7 @@ export default function Input(props) {
       <TextInput style={styles.input} placeholder={props.placeholder} secureTextEntry={props.isHidden} onChangeText={props.onChangeText}/>
       {props.type === "password" ? 
       <TouchableOpacity onPress={props.togglePasswordVisibility}>
-        {props.isHidden ? <Text>👁</Text> : <Text>𓂏</Text>}
+        {props.isHidden ? <Text>Show</Text> : <Text>Hide</Text>}
       </TouchableOpacity>
       : null}
     </View>

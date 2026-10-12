@@ -2,6 +2,7 @@ import { Redirect, router } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
+import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
 
 export default function HomeScreen() {
@@ -36,9 +37,7 @@ export default function HomeScreen() {
         <View style={styles.panel}>
           <Text style={styles.panelTitle}>Start your journey</Text>
           <Text style={styles.panelText}>Browse available motors and find a ride that fits your plans.</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => router.navigate('/explore')}>
-            <Text style={styles.primaryButtonText}>Explore Motors</Text>
-          </TouchableOpacity>
+          <SubmitButton title="EXPLORE" onPress={() => router.navigate('/explore')} />
         </View>
 
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
@@ -52,7 +51,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
   container: { flex: 1, justifyContent: 'space-between', padding: 24, paddingTop: 64 },
-  eyebrow: { color: '#2563eb', fontSize: 12, fontWeight: '700', letterSpacing: 1.4, marginBottom: 12 },
+  eyebrow: { color: '#21484a', fontSize: 12, fontWeight: '700', letterSpacing: 1.4, marginBottom: 12 },
   title: { color: '#0f172a', fontSize: 30, fontWeight: '700', marginBottom: 8 },
   subtitle: { color: '#64748b', fontSize: 16, lineHeight: 24 },
   panel: { backgroundColor: '#0f172a', borderRadius: 16, padding: 24 },
