@@ -1,13 +1,18 @@
-import MainSafe from '@/components/mainsafe'
-import SubmitButton from '@/components/submitbtn'
-import { useState } from 'react'
-import { StyleSheet, Text, TextInput, View } from 'react-native'
+import MainSafe from '@/components/mainsafe';
+import SubmitButton from '@/components/submitbtn';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
 
 export default function Create() {
   const [productName, setProductName] = useState('');
 
   return (
     <MainSafe>
+        <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.back}>← Back</Text>
+        </TouchableOpacity>
       <View style={styles.container}>
         <Text style={styles.header}>Create</Text>
         <TextInput style={styles.inputs} 
@@ -41,5 +46,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#ffffff',
         marginBottom: 24
-    }
+    },
+    back: { color: '#21484a', fontSize: 16, fontWeight: '600' },
 })

@@ -32,7 +32,7 @@ export default function MotorDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, paddingTop: 64, gap: 24 },
-  back: { color: '#2563eb', fontSize: 16, fontWeight: '600' },
+  back: { color: '#21484a', fontSize: 16, fontWeight: '600' },
   title: { color: '#0f172a', fontSize: 28, fontWeight: '700' },
   type: { color: '#64748b', fontSize: 16, marginTop: 4 },
   price: { color: '#2563eb', fontSize: 20, fontWeight: '700', marginTop: 12 },
