@@ -7,7 +7,6 @@ import { motors } from '@/database/motors';
 
 export default function ExploreScreen() {
   const handleFabPress = () => {
-    console.log('FAB Pressed!');
     router.push({
       pathname: '/(tabs)/explore/[id]/create',
       params: { id: 'new' },

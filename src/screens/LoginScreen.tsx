@@ -6,10 +6,12 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import Input from '@/components/input';
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
+import { useAuth } from '@/context/AuthContext';
 import { loginUser } from '@/database/auth';
 
 export default function LoginScreen() {
   const database = useSQLiteContext();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,6 +33,7 @@ export default function LoginScreen() {
         Alert.alert('Login Failed', 'The email or password is incorrect.');
         return;
       }
+      setUser(user);
       router.replace('/dashboard');
     } catch {
       Alert.alert('Login Failed', 'We could not sign you in. Please try again.');
