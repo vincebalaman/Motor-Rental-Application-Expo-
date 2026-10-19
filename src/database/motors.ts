@@ -1,4 +1,4 @@
-export type motor = {
+export type Motor = {
     id: number;
     name: string;
     type: string;
@@ -6,7 +6,7 @@ export type motor = {
     description: string;
 };
 
-export const motors: motor[] = [
+export const motors: Motor[] = [
     {id: 1, name: 'Honda Civic', type: 'Compact', description: 'A reliable and fuel-efficient compact car.', price: 20000},
     {id: 2, name: 'Toyota Camry', type: 'Midsize', description: 'A comfortable and spacious midsize sedan.', price: 25000},
     {id: 3, name: 'Ford F-150', type: 'Truck', description: 'A powerful and versatile full-size pickup truck.', price: 30000},

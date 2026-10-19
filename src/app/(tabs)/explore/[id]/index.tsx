@@ -2,10 +2,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
-import { motors } from '@/database/motors';
+import SubmitButton from '@/components/submitbtn';
+import { useMotorInventory } from '@/context/MotorContext';
 
 export default function MotorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { motors } = useMotorInventory();
   const motor = motors.find((m) => m.id === Number(id));
 
   return (
@@ -21,6 +23,15 @@ export default function MotorDetailScreen() {
             <Text style={styles.type}>{motor.type}</Text>
             <Text style={styles.price}>₱{motor.price} / day</Text>
             <Text style={styles.description}>{motor.description}</Text>
+            <SubmitButton
+              title="EDIT MOTOR"
+              onPress={() =>
+                router.push({
+                  pathname: '/(tabs)/explore/[id]/edit',
+                  params: { id: String(motor.id) },
+                })
+              }
+            />
           </View>
         ) : (
           <Text style={styles.title}>Motor not found</Text>

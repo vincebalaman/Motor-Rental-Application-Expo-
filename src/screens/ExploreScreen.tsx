@@ -3,9 +3,11 @@ import { FlatList, Pressable, StyleSheet, Text, TouchableOpacity } from 'react-n
 
 import MainSafe from '@/components/mainsafe';
 import ProductCard from '@/components/productcard';
-import { motors } from '@/database/motors';
+import { useMotorInventory } from '@/context/MotorContext';
 
 export default function ExploreScreen() {
+  const { motors } = useMotorInventory();
+
   const handleFabPress = () => {
     router.push({
       pathname: '/(tabs)/explore/[id]/create',
