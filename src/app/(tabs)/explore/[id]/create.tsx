@@ -2,11 +2,26 @@ import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import Input from '@/components/input';
 
 
 export default function Create() {
   const [productName, setProductName] = useState('');
+  const [productType, setProductType] = useState('');
+  const [productPrice, setProductPrice] = useState('');
+  const [productDescription, setProductDescription] = useState('');
+
+  const saveProduct = () => {
+    // Implement the logic to save the product details to your database or state management
+    console.log('Product Name:', productName);
+    console.log('Product Type:', productType);
+    console.log('Product Price:', productPrice);
+    console.log('Product Description:', productDescription);
+  }
+
+
 
   return (
     <MainSafe>
@@ -15,13 +30,31 @@ export default function Create() {
         </TouchableOpacity>
       <View style={styles.container}>
         <Text style={styles.header}>Create</Text>
-        <TextInput style={styles.inputs} 
-        placeholder="Enter something..." 
-        placeholderTextColor="#94a3b8"
-        value={productName}
-        onChangeText={setProductName}
+        <Input 
+          placeholder="Name" 
+          placeholderTextColor="#94a3b8"
+          value={productName}
+          onChangeText={setProductName}
         />
-      <SubmitButton title="Submit" onPress={console.log}/>
+        <Input 
+          placeholder="Type" 
+          placeholderTextColor="#94a3b8"
+          value={productType}
+          onChangeText={setProductType}
+        />
+        <Input 
+          placeholder="Price" 
+          placeholderTextColor="#94a3b8"
+          value={productPrice}
+          onChangeText={setProductPrice}
+        />
+        <Input 
+          placeholder="Description" 
+          placeholderTextColor="#94a3b8"
+          value={productDescription}
+          onChangeText={setProductDescription}
+        />
+      <SubmitButton title="Submit" onPress={saveProduct}/>
       </View>
     </MainSafe>
   )
