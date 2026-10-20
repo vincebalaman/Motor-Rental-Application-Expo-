@@ -32,10 +32,19 @@ export default function TabsLayout() {
         options={{
           title: 'Account',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" color={color} size={size} />
+            <Text style={{ color, fontSize: size }}>👤</Text>
           ),
         }}
       />
+      <Tabs.Screen
+        name="api-test"
+        options={{
+          title: 'API Test',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="cloud-upload-outline" size={size} color={color} />
+          ),
+        }}
+      />      
     </Tabs>
   );
 }
