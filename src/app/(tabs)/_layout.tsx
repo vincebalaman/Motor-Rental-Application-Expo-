@@ -32,7 +32,7 @@ export default function TabsLayout() {
         options={{
           title: 'Account',
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>👤</Text>
+            <Ionicons name="person" color={color} size={size} />
           ),
         }}
       />
