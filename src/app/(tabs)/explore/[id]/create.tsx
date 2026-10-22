@@ -21,10 +21,11 @@ export default function CreateMotorScreen() {
   const [type, setType] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
 
   const handleCreate = () => {
     const parsedPrice = Number(price.trim());
-    if (!name.trim() || !type.trim() || !description.trim() || !price.trim()) {
+    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imageUrl.trim()) {
       Alert.alert('Missing fields', 'Please complete all motor details.');
       return;
     }
@@ -38,6 +39,7 @@ export default function CreateMotorScreen() {
       type: type.trim(),
       price: parsedPrice,
       description: description.trim(),
+      imageUrl: imageUrl.trim(),
     });
     router.replace({
       pathname: '/(tabs)/explore/[id]',
@@ -69,6 +71,13 @@ export default function CreateMotorScreen() {
             onChangeText={setDescription}
             placeholder="Describe the motor"
             multiline
+          />
+          <MotorField
+            label="Image URL"
+            value={imageUrl}
+            onChangeText={setImageUrl}
+            placeholder="https://example.com/motor.jpg"
+            keyboardType="url"
           />
           <SubmitButton title="CREATE MOTOR" onPress={handleCreate} />
         </View>

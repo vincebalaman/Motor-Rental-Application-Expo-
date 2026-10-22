@@ -24,6 +24,7 @@ export default function EditMotorScreen() {
   const [type, setType] = useState(motor?.type ?? '');
   const [price, setPrice] = useState(motor ? String(motor.price) : '');
   const [description, setDescription] = useState(motor?.description ?? '');
+  const [imageUrl, setImageUrl] = useState(motor?.imageUrl ?? '');
 
   const handleSave = () => {
     const parsedPrice = Number(price.trim());
@@ -31,7 +32,7 @@ export default function EditMotorScreen() {
       Alert.alert('Motor not found', 'This motor is no longer available.');
       return;
     }
-    if (!name.trim() || !type.trim() || !description.trim() || !price.trim()) {
+    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imageUrl.trim()) {
       Alert.alert('Missing fields', 'Please complete all motor details.');
       return;
     }
@@ -45,6 +46,7 @@ export default function EditMotorScreen() {
       type: type.trim(),
       price: parsedPrice,
       description: description.trim(),
+      imageUrl: imageUrl.trim(),
     });
     router.replace({
       pathname: '/(tabs)/explore/[id]',
@@ -89,6 +91,13 @@ export default function EditMotorScreen() {
             onChangeText={setDescription}
             placeholder="Describe the motor"
             multiline
+          />
+          <MotorField
+            label="Image URL"
+            value={imageUrl}
+            onChangeText={setImageUrl}
+            placeholder="https://example.com/motor.jpg"
+            keyboardType="url"
           />
           <SubmitButton title="SAVE CHANGES" onPress={handleSave} />
         </View>
