@@ -1,5 +1,5 @@
 import { Redirect, router } from 'expo-router';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
@@ -27,38 +27,118 @@ export default function HomeScreen() {
 
   return (
     <MainSafe>
-      <View style={styles.container}>
-        <View>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
           <Text style={styles.eyebrow}>MOTORRENT DASHBOARD</Text>
-          <Text style={styles.title}>Welcome, {user.fullName}</Text>
-          <Text style={styles.subtitle}>Your next ride is ready to be discovered.</Text>
+          <Text style={styles.title}>Welcome back,</Text>
+          <Text style={styles.name}>{user.fullName}</Text>
+          <Text style={styles.subtitle}>
+            Make the most of every trip. Find a motor that suits your plans, compare your options, and get ready to explore.
+          </Text>
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Start your journey</Text>
-          <Text style={styles.panelText}>Browse available motors and find a ride that fits your plans.</Text>
+          <Text style={styles.panelEyebrow}>YOUR NEXT RIDE</Text>
+          <Text style={styles.panelTitle}>Find the right ride for your day.</Text>
+          <Text style={styles.panelText}>
+            From quick trips around town to longer adventures, browse the available motors and choose one that fits your route and budget.
+          </Text>
           <SubmitButton title="EXPLORE" onPress={() => router.navigate('/explore')} />
         </View>
 
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Log Out</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>A simple way to get moving</Text>
+          <Text style={styles.sectionIntro}>
+            Your next ride is only a few steps away. Take a moment to explore the options and pick the motor that works for you.
+          </Text>
+
+          <View style={styles.step}>
+            <View style={styles.stepNumber}>
+              <Text style={styles.stepNumberText}>01</Text>
+            </View>
+            <View style={styles.stepCopy}>
+              <Text style={styles.stepTitle}>Browse the collection</Text>
+              <Text style={styles.stepDescription}>
+                See the available motors, their details, and daily prices in Explore.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.step}>
+            <View style={styles.stepNumber}>
+              <Text style={styles.stepNumberText}>02</Text>
+            </View>
+            <View style={styles.stepCopy}>
+              <Text style={styles.stepTitle}>Compare your options</Text>
+              <Text style={styles.stepDescription}>
+                Open a motor to review its description and decide whether it suits your plans.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.step}>
+            <View style={styles.stepNumber}>
+              <Text style={styles.stepNumberText}>03</Text>
+            </View>
+            <View style={styles.stepCopy}>
+              <Text style={styles.stepTitle}>Get ready to ride</Text>
+              <Text style={styles.stepDescription}>
+                Choose a ride that fits your needs and enjoy the freedom of your next journey.
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.note}>
+          <Text style={styles.noteTitle}>A little planning goes a long way</Text>
+          <Text style={styles.noteText}>
+            Think about where you’re headed and what kind of ride will feel comfortable for the trip. A good match makes every mile better.
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={styles.logoutButton}
+          accessibilityRole="button"
+        >
+          <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </MainSafe>
   );
 }
 
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
-  container: { flex: 1, justifyContent: 'space-between', padding: 24, paddingTop: 64 },
-  eyebrow: { color: '#21484a', fontSize: 12, fontWeight: '700', letterSpacing: 1.4, marginBottom: 12 },
-  title: { color: '#0f172a', fontSize: 30, fontWeight: '700', marginBottom: 8 },
-  subtitle: { color: '#64748b', fontSize: 16, lineHeight: 24 },
-  panel: { backgroundColor: '#0f172a', borderRadius: 16, padding: 24 },
-  panelTitle: { color: '#ffffff', fontSize: 22, fontWeight: '700', marginBottom: 8 },
-  panelText: { color: '#cbd5e1', fontSize: 15, lineHeight: 23, marginBottom: 24 },
-  primaryButton: { alignItems: 'center', backgroundColor: '#3b82f6', borderRadius: 10, paddingVertical: 14 },
-  primaryButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
-  logoutButton: { alignItems: 'center', paddingVertical: 14 },
-  logoutText: { color: '#64748b', fontSize: 14, fontWeight: '600' },
+  container: { flexGrow: 1, padding: 24, paddingTop: 40, paddingBottom: 32 },
+  header: { marginBottom: 28 },
+  eyebrow: { color: '#21484a', fontSize: 12, fontWeight: '800', letterSpacing: 1.5, marginBottom: 16 },
+  title: { color: '#0f172a', fontSize: 28, fontWeight: '600' },
+  name: { color: '#0f172a', fontSize: 34, fontWeight: '800', marginTop: 2 },
+  subtitle: { color: '#64748b', fontSize: 16, lineHeight: 25, marginTop: 12 },
+  panel: { backgroundColor: '#0f172a', borderRadius: 20, padding: 24 },
+  panelEyebrow: { color: '#93c5fd', fontSize: 11, fontWeight: '800', letterSpacing: 1.4, marginBottom: 10 },
+  panelTitle: { color: '#ffffff', fontSize: 24, fontWeight: '800', lineHeight: 31, marginBottom: 10 },
+  panelText: { color: '#cbd5e1', fontSize: 15, lineHeight: 23, marginBottom: 18 },
+  section: { marginTop: 34 },
+  sectionTitle: { color: '#0f172a', fontSize: 22, fontWeight: '800' },
+  sectionIntro: { color: '#64748b', fontSize: 15, lineHeight: 23, marginTop: 8, marginBottom: 20 },
+  step: { alignItems: 'flex-start', flexDirection: 'row', gap: 14, marginBottom: 18 },
+  stepNumber: {
+    alignItems: 'center',
+    backgroundColor: '#e2ebe8',
+    borderRadius: 13,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  stepNumberText: { color: '#21484a', fontSize: 13, fontWeight: '800' },
+  stepCopy: { flex: 1, paddingTop: 2 },
+  stepTitle: { color: '#0f172a', fontSize: 16, fontWeight: '700' },
+  stepDescription: { color: '#64748b', fontSize: 14, lineHeight: 21, marginTop: 4 },
+  note: { backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: 16, borderWidth: 1, marginTop: 12, padding: 20 },
+  noteTitle: { color: '#21484a', fontSize: 16, fontWeight: '800' },
+  noteText: { color: '#64748b', fontSize: 14, lineHeight: 22, marginTop: 7 },
+  logoutButton: { alignItems: 'center', marginTop: 20, paddingVertical: 14 },
+  logoutText: { color: '#64748b', fontSize: 14, fontWeight: '700' },
 });

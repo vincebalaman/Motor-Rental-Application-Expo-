@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { FlatList, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
@@ -7,18 +6,13 @@ import ProductCard from '@/components/productcard';
 import { useMotorInventory } from '@/context/MotorContext';
 
 export default function ExploreScreen() {
-  const { motors } = useMotorInventory();
-  const [hiddenMotorIds, setHiddenMotorIds] = useState<Set<number>>(() => new Set());
+  const { motors, hiddenMotorIds, hideMotor } = useMotorInventory();
 
   const handleFabPress = () => {
     router.push({
       pathname: '/(tabs)/explore/[id]/create',
       params: { id: 'new' },
     })
-  };
-
-  const handleHideMotor = (motorId: number) => {
-    setHiddenMotorIds((currentIds) => new Set(currentIds).add(motorId));
   };
 
   return (
@@ -47,7 +41,7 @@ export default function ExploreScreen() {
               </TouchableOpacity>
               <Pressable
                 style={styles.hideButton}
-                onPress={() => handleHideMotor(item.id)}
+                onPress={() => hideMotor(item.id)}
                 accessibilityRole="button"
                 accessibilityLabel={`Hide ${item.name}`}
                 accessibilityHint="Removes this motor from the Explore list until you leave this screen."

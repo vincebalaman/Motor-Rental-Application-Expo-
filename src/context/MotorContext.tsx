@@ -6,14 +6,17 @@ type MotorInput = Omit<Motor, 'id'>;
 
 type MotorContextValue = {
   motors: Motor[];
+  hiddenMotorIds: Set<number>;
   createMotor: (motor: MotorInput) => Motor;
   updateMotor: (id: number, motor: MotorInput) => void;
+  hideMotor: (id: number) => void;
 };
 
 const MotorContext = createContext<MotorContextValue | null>(null);
 
 export function MotorProvider({ children }: { children: ReactNode }) {
   const [motors, setMotors] = useState<Motor[]>(initialMotors);
+  const [hiddenMotorIds, setHiddenMotorIds] = useState<Set<number>>(() => new Set());
 
   const createMotor = (motor: MotorInput) => {
     const nextId = motors.reduce((highestId, item) => Math.max(highestId, item.id), 0) + 1;
@@ -30,8 +33,12 @@ export function MotorProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const hideMotor = (id: number) => {
+    setHiddenMotorIds((currentIds) => new Set(currentIds).add(id));
+  };
+
   return (
-    <MotorContext.Provider value={{ motors, createMotor, updateMotor }}>
+    <MotorContext.Provider value={{ motors, hiddenMotorIds, createMotor, updateMotor, hideMotor }}>
       {children}
     </MotorContext.Provider>
   );
