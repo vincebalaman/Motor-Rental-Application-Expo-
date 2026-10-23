@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { FlatList, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
 import ProductCard from '@/components/productcard';
@@ -22,32 +22,20 @@ export default function ExploreScreen() {
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <ProductCard>
+          <ProductCard
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/explore/[id]',
+                params: { id: String(item.id) },
+              })
+            }
+            accessibilityLabel={`View ${item.name} details`}
+          >
             <Image source={{ uri: item.imageUrl }} style={styles.image} accessibilityLabel={`${item.name} image`} />
             <View style={styles.cardContent}>
-              <TouchableOpacity
-                style={styles.motorDetails}
-                onPress={() =>
-                  router.push({
-                    pathname: '/(tabs)/explore/[id]',
-                    params: { id: String(item.id) },
-                  })
-                }
-                accessibilityRole="button"
-              >
+              <View style={styles.motorDetails}>
                 <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.type}>{item.type}</Text>
-                <Text style={styles.price}>₱{item.price} / day</Text>
-              </TouchableOpacity>
-              <Pressable
-                style={styles.hideButton}
-                onPress={() => hideMotor(item.id)}
-                accessibilityRole="button"
-                accessibilityLabel={`Hide ${item.name}`}
-                accessibilityHint="Removes this motor from the Explore list until you leave this screen."
-              >
-                <Text style={styles.hideButtonText}>Hide</Text>
-              </Pressable>
+              </View>
             </View>
           </ProductCard>
         )}

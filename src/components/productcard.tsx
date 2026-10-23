@@ -1,10 +1,25 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 interface ProductCardProps {
   children?: React.ReactNode;
+  onPress?: () => void;
+  accessibilityLabel?: string;
 }
 
-export default function ProductCard({children} : ProductCardProps) {
+export default function ProductCard({ children, onPress, accessibilityLabel }: ProductCardProps) {
+  if (onPress) {
+    return (
+      <Pressable
+        style={styles.card}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+      >
+        {children}
+      </Pressable>
+    );
+  }
+
   return (
     <View style={styles.card}>
       {children}
