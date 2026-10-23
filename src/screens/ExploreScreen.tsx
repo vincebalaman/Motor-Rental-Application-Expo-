@@ -36,6 +36,9 @@ export default function ExploreScreen() {
               <View style={styles.motorDetails}>
                 <Text style={styles.name}>{item.name}</Text>
               </View>
+              <Text style={styles.cardArrow} accessibilityElementsHidden>
+                ›
+              </Text>
             </View>
           </ProductCard>
         )}
@@ -54,6 +57,7 @@ const styles = StyleSheet.create({
   cardContent: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
   motorDetails: { flex: 1 },
   name: { color: '#ffffff', fontSize: 18, fontWeight: '700' },
+  cardArrow: { color: '#cbd5e1', fontSize: 28, lineHeight: 28 },
   type: { color: '#cbd5e1', fontSize: 14, marginTop: 4 },
   price: { color: '#ffffff', fontSize: 15, fontWeight: '700', marginTop: 8 },
   hideButton: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 8, backgroundColor: '#7f1d1d' },
