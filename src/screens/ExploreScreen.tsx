@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28, // Perfect circle (half of width/height)
-    backgroundColor: '#2563eb',
+    backgroundColor: '#21484a',
     justifyContent: 'center',
     alignItems: 'center',
     // Android Shadow
