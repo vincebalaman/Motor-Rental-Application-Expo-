@@ -59,7 +59,7 @@ export default function MotorDetailScreen() {
                 accessibilityLabel={`Hide ${motor.name}`}
                 accessibilityHint="Removes this motor from the Explore list for this session."
               >
-                <Text style={styles.hideButtonText}>Hide motor</Text>
+                <Text style={styles.hideButtonText}>Delete motor</Text>
               </Pressable>
             </View>
           </View>
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: '#334155', marginVertical: 18 },
   description: { color: '#cbd5e1', fontSize: 16, lineHeight: 25 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  editButton: { flex: 1, alignItems: 'center', backgroundColor: '#2563eb', borderRadius: 12, paddingVertical: 15 },
+  editButton: { flex: 1, alignItems: 'center', backgroundColor: '#21484a', borderRadius: 12, paddingVertical: 15 },
   editButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
   hideButton: { flex: 1, alignItems: 'center', backgroundColor: '#7f1d1d', borderRadius: 12, paddingVertical: 15 },
   hideButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },

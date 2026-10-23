@@ -2,7 +2,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
   KeyboardTypeOptions,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -69,39 +71,48 @@ export default function EditMotorScreen() {
 
   return (
     <MainSafe>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
-          <Text style={styles.back}>← Back</Text>
-        </TouchableOpacity>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+        >
+          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
+            <Text style={styles.back}>← Back</Text>
+          </TouchableOpacity>
 
-        <View style={styles.form}>
-          <Text style={styles.header}>Edit motor</Text>
-          <MotorField label="Name" value={name} onChangeText={setName} placeholder="Motor name" />
-          <MotorField label="Type" value={type} onChangeText={setType} placeholder="Motor type" />
-          <MotorField
-            label="Price per day (₱)"
-            value={price}
-            onChangeText={setPrice}
-            placeholder="Price"
-            keyboardType="decimal-pad"
-          />
-          <MotorField
-            label="Description"
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Describe the motor"
-            multiline
-          />
-          <MotorField
-            label="Image URL"
-            value={imageUrl}
-            onChangeText={setImageUrl}
-            placeholder="https://example.com/motor.jpg"
-            keyboardType="url"
-          />
-          <SubmitButton title="SAVE CHANGES" onPress={handleSave} />
-        </View>
-      </ScrollView>
+          <View style={styles.form}>
+            <Text style={styles.header}>Edit motor</Text>
+            <MotorField label="Name" value={name} onChangeText={setName} placeholder="Motor name" />
+            <MotorField label="Type" value={type} onChangeText={setType} placeholder="Motor type" />
+            <MotorField
+              label="Price per day (₱)"
+              value={price}
+              onChangeText={setPrice}
+              placeholder="Price"
+              keyboardType="decimal-pad"
+            />
+            <MotorField
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe the motor"
+              multiline
+            />
+            <MotorField
+              label="Image URL"
+              value={imageUrl}
+              onChangeText={setImageUrl}
+              placeholder="https://example.com/motor.jpg"
+              keyboardType="url"
+            />
+            <SubmitButton title="SAVE CHANGES" onPress={handleSave} />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </MainSafe>
   );
 }
@@ -142,10 +153,11 @@ function MotorField({
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, padding: 24, paddingTop: 32 },
+  keyboardAvoidingView: { flex: 1 },
+  content: { flexGrow: 1, padding: 24, paddingTop: 32, paddingBottom: 48 },
   notFound: { flex: 1, padding: 24, paddingTop: 32, gap: 24 },
   back: { color: '#21484a', fontSize: 16, fontWeight: '600' },
-  form: { flex: 1, justifyContent: 'center', gap: 16, paddingVertical: 32 },
+  form: { gap: 16, paddingVertical: 32 },
   header: { color: '#0f172a', fontSize: 26, fontWeight: '700', marginBottom: 8 },
   field: { gap: 6 },
   label: { color: '#334155', fontSize: 14, fontWeight: '600' },
