@@ -1,5 +1,6 @@
 import { Redirect, router } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
@@ -7,10 +8,17 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function HomeScreen() {
   const { user, loading, logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
-    router.replace('/auth/login');
+    setLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      Alert.alert('Logout failed', 'We could not sign you out. Please try again.');
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   if (loading) {
@@ -100,8 +108,9 @@ export default function HomeScreen() {
           onPress={handleLogout}
           style={styles.logoutButton}
           accessibilityRole="button"
+          disabled={loggingOut}
         >
-          <Text style={styles.logoutText}>Log out</Text>
+          {loggingOut ? <ActivityIndicator color="#21484a" /> : <Text style={styles.logoutText}>Log out</Text>}
         </TouchableOpacity>
       </ScrollView>
     </MainSafe>

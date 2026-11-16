@@ -1,6 +1,6 @@
-import { Link, Redirect, router } from 'expo-router';
+import { Link, Redirect } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
 import { useAuth } from '@/context/AuthContext';
@@ -13,7 +13,8 @@ export default function AccountScreen() {
     setLoggingOut(true);
     try {
       await logout();
-      router.replace('/auth/login');
+    } catch {
+      Alert.alert('Logout failed', 'We could not sign you out. Please try again.');
     } finally {
       setLoggingOut(false);
     }
