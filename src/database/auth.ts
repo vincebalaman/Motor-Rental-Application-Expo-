@@ -49,7 +49,6 @@ export async function initializeDatabase(database: SQLiteDatabase) {
   });
   // Remove old WAL frames after replacing legacy credentials.
   if (migrated) await database.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');
-
 }
 
 export async function createUser(

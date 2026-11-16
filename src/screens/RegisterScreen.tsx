@@ -89,10 +89,11 @@ export default function RegisterScreen() {
         "Your account has been created successfully.",
         [{ text: "Continue", onPress: () => router.replace("/auth/login") }],
       );
-    } catch {
+    } catch (error) {
+      const duplicateEmail = error instanceof Error && /UNIQUE constraint failed: users.email/i.test(error.message);
       Alert.alert(
         "Registration failed",
-        "An account with this email already exists.",
+        duplicateEmail ? "An account with this email already exists." : "We could not create your account. Please try again.",
       );
     } finally {
       setIsSubmitting(false);

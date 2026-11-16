@@ -15,9 +15,19 @@ inventory. Roles and bookings are not implemented yet. SQLite currently stores d
 each device; sharing accounts, availability, and bookings across devices will require a
 shared backend.
 
-Run `npm test` with Node.js 22.18+ to check inventory persistence, seed rollback, and
-validation against SQLite. These tests exercise the database queries through a Node
-SQLite adapter; Expo device behavior still requires manual testing.
+Passwords use PBKDF2-HMAC-SHA256 with 600,000 iterations, a fresh 16-byte secure
+random salt, and a 32-byte derived key. Existing local accounts are migrated atomically
+on startup without changing their IDs, passwords, or saved sessions. Migration enables
+SQLite secure deletion and truncates the WAL after replacing legacy credentials;
+previously copied databases and backups are outside this migration.
+
+Run `npm test` with Node.js 22.18+ to check authentication, migration rollback,
+inventory persistence, and validation against SQLite. These tests exercise the database queries through a Node
+SQLite adapter; Expo device behavior still requires manual testing. Authentication tests use Node's
+secure random source in place of the Expo native bridge and cross-check PBKDF2 with
+Node crypto. After this update, verify login with an existing account and a new account
+on a device. Expo Go includes `expo-crypto`; custom development builds must include the
+new native dependency.
 
 ---
 
