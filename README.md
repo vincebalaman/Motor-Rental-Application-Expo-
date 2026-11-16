@@ -6,7 +6,9 @@ A mobile application built with **React Native + Expo** for our **Mobile Program
 
 **IMPORTANT** 
 
-the main branch has been overriden to update the project to SDK 57, members need to sync their local repos after the force push
+The project currently targets Expo SDK 58 (see `package.json`). The repository instructions require reading the SDK 57 reference before editing; also consult the SDK 58 reference for APIs used by the installed dependencies.
+
+Members syncing after the main branch force push can follow the steps below.
 
 1. Fetch the updated remote state:
 

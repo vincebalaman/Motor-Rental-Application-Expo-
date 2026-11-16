@@ -64,7 +64,7 @@ export default function VerifyScreen() {
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Didn't receive the code? </Text>
+          <Text style={styles.footerText}>Didn&apos;t receive the code? </Text>
 
           <Link href="/auth/forgot-password">
             <Text style={styles.footerLink}>Send Again</Text>

@@ -1,12 +1,10 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider } from 'expo-sqlite';
 import { useColorScheme } from 'react-native';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { initializeDatabase } from '@/database/auth';
 
-SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -20,7 +18,8 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="auth/login" />
             <Stack.Screen name="auth/register" />
-            <Stack.Screen name="motor/[id]" />
+            <Stack.Screen name="auth/forgot-password" />
+            <Stack.Screen name="auth/verify" />
           </Stack>
         </ThemeProvider>
       </AuthProvider>

@@ -6,7 +6,7 @@ import ProductCard from '@/components/productcard';
 import { useMotorInventory } from '@/context/MotorContext';
 
 export default function ExploreScreen() {
-  const { motors, hiddenMotorIds, hideMotor } = useMotorInventory();
+  const { motors, hiddenMotorIds } = useMotorInventory();
 
   const handleFabPress = () => {
     router.push({
