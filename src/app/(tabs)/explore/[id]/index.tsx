@@ -1,15 +1,36 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
 import ProductCard from '@/components/productcard';
+import SubmitButton from '@/components/submitbtn';
 import { useMotorInventory } from '@/context/MotorContext';
 
 export default function MotorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { motors, hiddenMotorIds, hideMotor } = useMotorInventory();
+  const { motors, deleteMotor } = useMotorInventory();
   const motor = motors.find((m) => m.id === Number(id));
-  const isHidden = motor ? hiddenMotorIds.has(motor.id) : false;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleting = useRef(false);
+
+  const handleDelete = async () => {
+    if (!motor || deleting.current) return;
+    deleting.current = true;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteMotor(motor.id);
+      router.replace('/(tabs)/explore');
+    } catch {
+      setDeleteError('We could not delete this motor. Please try again.');
+    } finally {
+      deleting.current = false;
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <MainSafe>
@@ -18,7 +39,7 @@ export default function MotorDetailScreen() {
           <Text style={styles.back}>← Explore</Text>
         </TouchableOpacity>
 
-        {motor && !isHidden ? (
+        {motor ? (
           <View style={styles.content}>
             <Text style={styles.eyebrow}>MOTOR DETAILS</Text>
             <ProductCard>
@@ -39,6 +60,7 @@ export default function MotorDetailScreen() {
             <View style={styles.actions}>
               <Pressable
                 style={styles.editButton}
+                disabled={isDeleting}
                 onPress={() =>
                   router.push({
                     pathname: '/(tabs)/explore/[id]/edit',
@@ -50,23 +72,32 @@ export default function MotorDetailScreen() {
                 <Text style={styles.editButtonText}>Edit motor</Text>
               </Pressable>
               <Pressable
-                style={styles.hideButton}
-                onPress={() => {
-                  hideMotor(motor.id);
-                  router.replace('/(tabs)/explore');
-                }}
+                style={styles.deleteButton}
+                onPress={() => { setConfirmingDelete(true); setDeleteError(null); }}
+                disabled={isDeleting}
                 accessibilityRole="button"
-                accessibilityLabel={`Hide ${motor.name}`}
-                accessibilityHint="Removes this motor from the Explore list for this session."
+                accessibilityLabel={`Delete ${motor.name}`}
+                accessibilityHint="Asks for confirmation before deleting this motor."
               >
-                <Text style={styles.hideButtonText}>Delete motor</Text>
+                <Text style={styles.deleteButtonText}>Delete motor</Text>
               </Pressable>
             </View>
+            {confirmingDelete && (
+              <View style={styles.confirmation}>
+                <Text style={styles.confirmationTitle}>Delete {motor.name}?</Text>
+                <Text style={styles.notFoundText}>This removes the motor from the catalog, including after restarting the app.</Text>
+                {deleteError && <Text accessibilityRole="alert" style={styles.deleteError}>{deleteError}</Text>}
+                <SubmitButton title="CONFIRM DELETE" onPress={handleDelete} isSubmitting={isDeleting} style={styles.confirmDeleteButton} />
+                <Pressable onPress={() => setConfirmingDelete(false)} disabled={isDeleting} accessibilityRole="button" style={styles.cancelButton}>
+                  <Text style={styles.back}>Cancel</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.notFound}>
             <Text style={styles.notFoundTitle}>Motor not available</Text>
-            <Text style={styles.notFoundText}>This motor may have been hidden from Explore.</Text>
+            <Text style={styles.notFoundText}>This motor may have been deleted from the catalog.</Text>
           </View>
         )}
       </ScrollView>
@@ -75,6 +106,11 @@ export default function MotorDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  confirmDeleteButton: { backgroundColor: '#7f1d1d' },
+  confirmation: { gap: 12, padding: 20, backgroundColor: '#ffffff', borderRadius: 12 },
+  confirmationTitle: { color: '#0f172a', fontSize: 18, fontWeight: '700' },
+  deleteError: { color: '#991b1b', fontSize: 14, lineHeight: 21 },
+  cancelButton: { alignItems: 'center', padding: 12 },
   container: { flexGrow: 1, padding: 24, paddingTop: 32 },
   back: { color: '#21484a', fontSize: 16, fontWeight: '700' },
   content: { gap: 16, paddingTop: 28, paddingBottom: 24 },
@@ -90,8 +126,8 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 12, marginTop: 4 },
   editButton: { flex: 1, alignItems: 'center', backgroundColor: '#21484a', borderRadius: 12, paddingVertical: 15 },
   editButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
-  hideButton: { flex: 1, alignItems: 'center', backgroundColor: '#7f1d1d', borderRadius: 12, paddingVertical: 15 },
-  hideButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
+  deleteButton: { flex: 1, alignItems: 'center', backgroundColor: '#7f1d1d', borderRadius: 12, paddingVertical: 15 },
+  deleteButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
   notFound: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   notFoundTitle: { color: '#0f172a', fontSize: 22, fontWeight: '800' },
   notFoundText: { color: '#64748b', fontSize: 15, textAlign: 'center' },

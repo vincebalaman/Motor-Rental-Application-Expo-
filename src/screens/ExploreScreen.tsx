@@ -6,7 +6,7 @@ import ProductCard from '@/components/productcard';
 import { useMotorInventory } from '@/context/MotorContext';
 
 export default function ExploreScreen() {
-  const { motors, hiddenMotorIds } = useMotorInventory();
+  const { motors } = useMotorInventory();
 
   const handleFabPress = () => {
     router.push({
@@ -18,7 +18,7 @@ export default function ExploreScreen() {
   return (
     <MainSafe>
       <FlatList
-        data={motors.filter((motor) => !hiddenMotorIds.has(motor.id))}
+        data={motors}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (

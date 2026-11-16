@@ -1,3 +1,5 @@
+import type { SQLiteDatabase } from 'expo-sqlite';
+
 export type Motor = {
     id: number;
     name: string;
@@ -7,7 +9,7 @@ export type Motor = {
     imageUrl: string;
 };
 
-export const motors: Motor[] = [
+const seedMotors: Motor[] = [
     {
         id: 1, 
         name: 'Honda CBR600RR', 
@@ -49,3 +51,84 @@ export const motors: Motor[] = [
         imageUrl: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=1000&auto=format&fit=crop&q=80'
     },
 ];
+
+export type MotorInput = Omit<Motor, 'id'>;
+
+export async function initializeMotorDatabase(database: SQLiteDatabase) {
+  await database.withTransactionAsync(async () => {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS motors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        price REAL NOT NULL CHECK (price > 0),
+        description TEXT NOT NULL,
+        image_url TEXT NOT NULL,
+        deleted_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS app_migrations (
+        name TEXT PRIMARY KEY NOT NULL
+      );
+    `);
+    const seeded = await database.getFirstAsync<{ name: string }>(
+      'SELECT name FROM app_migrations WHERE name = ?', 'motor_inventory_v1',
+    );
+    if (seeded) return;
+
+    for (const motor of seedMotors) {
+      await database.runAsync(
+        'INSERT INTO motors (id, name, type, price, description, image_url) VALUES (?, ?, ?, ?, ?, ?)',
+        motor.id, motor.name, motor.type, motor.price, motor.description, motor.imageUrl,
+      );
+    }
+    await database.runAsync('INSERT INTO app_migrations (name) VALUES (?)', 'motor_inventory_v1');
+  });
+}
+
+export async function getMotors(database: SQLiteDatabase): Promise<Motor[]> {
+  return database.getAllAsync<Motor>(
+    'SELECT id, name, type, price, description, image_url AS imageUrl FROM motors WHERE deleted_at IS NULL ORDER BY id',
+  );
+}
+
+function normalizeMotor(motor: MotorInput): MotorInput {
+  const normalized = {
+    name: motor.name.trim(),
+    type: motor.type.trim(),
+    price: motor.price,
+    description: motor.description.trim(),
+    imageUrl: motor.imageUrl.trim(),
+  };
+  if (!normalized.name || !normalized.type || !normalized.description || !normalized.imageUrl ||
+      !Number.isFinite(normalized.price) || normalized.price <= 0) {
+    throw new Error('Complete all motor details with a valid price.');
+  }
+  return normalized;
+}
+
+export async function insertMotor(database: SQLiteDatabase, input: MotorInput): Promise<Motor> {
+  const motor = normalizeMotor(input);
+  const result = await database.runAsync(
+    'INSERT INTO motors (name, type, price, description, image_url) VALUES (?, ?, ?, ?, ?)',
+    motor.name, motor.type, motor.price, motor.description, motor.imageUrl,
+  );
+  return { ...motor, id: result.lastInsertRowId };
+}
+
+export async function saveMotor(database: SQLiteDatabase, id: number, input: MotorInput): Promise<Motor> {
+  const motor = normalizeMotor(input);
+  const result = await database.runAsync(
+    'UPDATE motors SET name = ?, type = ?, price = ?, description = ?, image_url = ? WHERE id = ? AND deleted_at IS NULL',
+    motor.name, motor.type, motor.price, motor.description, motor.imageUrl, id,
+  );
+  if (result.changes !== 1) throw new Error('Motor not found.');
+  return { ...motor, id };
+}
+
+export async function removeMotor(database: SQLiteDatabase, id: number): Promise<void> {
+  // Retain the record so future booking history can reference this motor.
+  const result = await database.runAsync(
+    'UPDATE motors SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL', id,
+  );
+  if (result.changes !== 1) throw new Error('Motor not found.');
+}

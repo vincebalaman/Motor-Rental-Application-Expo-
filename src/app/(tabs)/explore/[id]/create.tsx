@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -24,8 +24,12 @@ export default function CreateMotorScreen() {
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const submitting = useRef(false);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
+    if (submitting.current) return;
     const parsedPrice = Number(price.trim());
     if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imageUrl.trim()) {
       Alert.alert('Missing fields', 'Please complete all motor details.');
@@ -36,17 +40,27 @@ export default function CreateMotorScreen() {
       return;
     }
 
-    const motor = createMotor({
-      name: name.trim(),
-      type: type.trim(),
-      price: parsedPrice,
-      description: description.trim(),
-      imageUrl: imageUrl.trim(),
-    });
-    router.replace({
-      pathname: '/(tabs)/explore/[id]',
-      params: { id: String(motor.id) },
-    });
+    submitting.current = true;
+    setIsSubmitting(true);
+    setSaveError(null);
+    try {
+      const motor = await createMotor({
+        name: name.trim(),
+        type: type.trim(),
+        price: parsedPrice,
+        description: description.trim(),
+        imageUrl: imageUrl.trim(),
+      });
+      router.replace({
+        pathname: '/(tabs)/explore/[id]',
+        params: { id: String(motor.id) },
+      });
+    } catch {
+      setSaveError('We could not create this motor. Your details are still here; please try again.');
+    } finally {
+      submitting.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -89,7 +103,8 @@ export default function CreateMotorScreen() {
               placeholder="https://example.com/motor.jpg"
               keyboardType="url"
             />
-            <SubmitButton title="CREATE MOTOR" onPress={handleCreate} />
+            {saveError && <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text>}
+            <SubmitButton title="CREATE MOTOR" onPress={handleCreate} isSubmitting={isSubmitting} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -133,6 +148,7 @@ function MotorField({
 }
 
 const styles = StyleSheet.create({
+  saveError: { color: '#991b1b', fontSize: 14, lineHeight: 21 },
   keyboardAvoidingView: { flex: 1 },
   content: { flexGrow: 1, padding: 24, paddingTop: 32, paddingBottom: 48 },
   back: { color: '#21484a', fontSize: 16, fontWeight: '600' },

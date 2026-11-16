@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -27,8 +27,12 @@ export default function EditMotorScreen() {
   const [price, setPrice] = useState(motor ? String(motor.price) : '');
   const [description, setDescription] = useState(motor?.description ?? '');
   const [imageUrl, setImageUrl] = useState(motor?.imageUrl ?? '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const submitting = useRef(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (submitting.current) return;
     const parsedPrice = Number(price.trim());
     if (!motor || !Number.isInteger(motorId)) {
       Alert.alert('Motor not found', 'This motor is no longer available.');
@@ -43,17 +47,27 @@ export default function EditMotorScreen() {
       return;
     }
 
-    updateMotor(motorId, {
-      name: name.trim(),
-      type: type.trim(),
-      price: parsedPrice,
-      description: description.trim(),
-      imageUrl: imageUrl.trim(),
-    });
-    router.replace({
-      pathname: '/(tabs)/explore/[id]',
-      params: { id: String(motorId) },
-    });
+    submitting.current = true;
+    setIsSubmitting(true);
+    setSaveError(null);
+    try {
+      await updateMotor(motorId, {
+        name: name.trim(),
+        type: type.trim(),
+        price: parsedPrice,
+        description: description.trim(),
+        imageUrl: imageUrl.trim(),
+      });
+      router.replace({
+        pathname: '/(tabs)/explore/[id]',
+        params: { id: String(motorId) },
+      });
+    } catch {
+      setSaveError('We could not save this motor. Your details are still here; please try again.');
+    } finally {
+      submitting.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   if (!motor) {
@@ -109,7 +123,8 @@ export default function EditMotorScreen() {
               placeholder="https://example.com/motor.jpg"
               keyboardType="url"
             />
-            <SubmitButton title="SAVE CHANGES" onPress={handleSave} />
+            {saveError && <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text>}
+            <SubmitButton title="SAVE CHANGES" onPress={handleSave} isSubmitting={isSubmitting} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -153,6 +168,7 @@ function MotorField({
 }
 
 const styles = StyleSheet.create({
+  saveError: { color: '#991b1b', fontSize: 14, lineHeight: 21 },
   keyboardAvoidingView: { flex: 1 },
   content: { flexGrow: 1, padding: 24, paddingTop: 32, paddingBottom: 48 },
   notFound: { flex: 1, padding: 24, paddingTop: 32, gap: 24 },

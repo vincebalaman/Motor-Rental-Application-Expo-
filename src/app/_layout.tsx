@@ -5,7 +5,7 @@ import { ActivityIndicator, StyleSheet, Text, useColorScheme, View } from 'react
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { initializeDatabase } from '@/database/auth';
+import { initializeDatabase } from '@/database';
 
 function AppNavigator() {
   const colorScheme = useColorScheme();

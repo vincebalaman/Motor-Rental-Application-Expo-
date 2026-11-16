@@ -2,6 +2,23 @@
 
 A mobile application built with **React Native + Expo** for our **Mobile Programming** subject. The app allows users to browse, book, and manage motor rentals — with an admin panel for managing listings and bookings.
 
+
+## Current storage and planned roles
+
+Accounts, sessions, and the motor catalog are stored locally in SQLite. Motor additions,
+edits, and deletions survive app restarts. The sample inventory is seeded once; deleting
+all motors leaves an empty catalog. Deleted motor records are retained internally for
+future booking references.
+
+The planned multi-user design has clients who browse and book, and admins who manage
+inventory. Roles and bookings are not implemented yet. SQLite currently stores data on
+each device; sharing accounts, availability, and bookings across devices will require a
+shared backend.
+
+Run `npm test` with Node.js 22.18+ to check inventory persistence, seed rollback, and
+validation against SQLite. These tests exercise the database queries through a Node
+SQLite adapter; Expo device behavior still requires manual testing.
+
 ---
 
 **IMPORTANT** 
