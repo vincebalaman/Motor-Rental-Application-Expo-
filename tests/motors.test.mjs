@@ -2,11 +2,35 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openDatabase } from './helpers/sqlite.mjs';
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 
 import { getMotors, initializeMotorDatabase, insertMotor, removeMotor, saveMotor } from '../src/database/motors.ts';
 
+// Execute the repository's queries against SQLite without the native Expo runtime.
+function openDatabase(path = ':memory:') {
+  const connection = new DatabaseSync(path);
+  return {
+    close: () => connection.close(),
+    execAsync: async (sql) => { connection.exec(sql); },
+    getFirstAsync: async (sql, ...params) => connection.prepare(sql).get(...params) ?? null,
+    getAllAsync: async (sql, ...params) => connection.prepare(sql).all(...params),
+    runAsync: async (sql, ...params) => {
+      const result = connection.prepare(sql).run(...params);
+      return { changes: result.changes, lastInsertRowId: result.lastInsertRowid };
+    },
+    async withTransactionAsync(task) {
+      connection.exec('BEGIN');
+      try {
+        await task();
+        connection.exec('COMMIT');
+      } catch (error) {
+        connection.exec('ROLLBACK');
+        throw error;
+      }
+    },
+  };
+}
 
 const input = {
   name: "  Rider's Scooter  ", type: 'Scooter', price: 1500.50,

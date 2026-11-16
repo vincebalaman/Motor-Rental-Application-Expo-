@@ -1,6 +1,5 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, type ErrorBoundaryProps } from 'expo-router';
-import { SQLiteProvider, type SQLiteDatabase } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { SQLiteProvider } from 'expo-sqlite';
 import { ActivityIndicator, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
@@ -47,45 +46,17 @@ function AppNavigator() {
   );
 }
 
-export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
-  return (
-    <MainSafe>
-      <View style={styles.sessionStatus}>
-        <Text accessibilityRole="alert" style={styles.errorText}>We could not open the app. Please try again.</Text>
-        <SubmitButton title="TRY AGAIN" onPress={retry} />
-      </View>
-    </MainSafe>
-  );
-}
-
 export default function RootLayout() {
-  const [initializing, setInitializing] = useState(true);
-  const initialize = useCallback(async (database: SQLiteDatabase) => {
-    await initializeDatabase(database);
-    setInitializing(false);
-  }, []);
-
   return (
-    <>
-      {initializing && (
-        <MainSafe>
-          <View style={styles.sessionStatus}>
-            <ActivityIndicator color="#21484a" accessibilityLabel="Preparing your app" />
-            <Text style={styles.statusText}>Preparing your app. This may take a moment.</Text>
-          </View>
-        </MainSafe>
-      )}
-      <SQLiteProvider databaseName="motor-rental.db" onInit={initialize}>
-        <AuthProvider>
-          <AppNavigator />
-        </AuthProvider>
-      </SQLiteProvider>
-    </>
+    <SQLiteProvider databaseName="motor-rental.db" onInit={initializeDatabase}>
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
+    </SQLiteProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  statusText: { color: '#21484a', fontSize: 16, textAlign: 'center' },
   sessionStatus: { flex: 1, justifyContent: 'center', padding: 24, gap: 16 },
   errorText: { color: '#991b1b', fontSize: 16, lineHeight: 24, textAlign: 'center' },
 });

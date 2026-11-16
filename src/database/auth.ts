@@ -1,7 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { hashPassword, verifyPassword } from '../security/password';
-
 export type AuthUser = {
   id: number;
   fullName: string;
@@ -11,13 +9,11 @@ export type AuthUser = {
 export async function initializeDatabase(database: SQLiteDatabase) {
   await database.execAsync(`
     PRAGMA journal_mode = WAL;
-    PRAGMA secure_delete = ON;
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY NOT NULL,
       full_name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE COLLATE NOCASE,
-      password_hash TEXT NOT NULL,
-      password_version INTEGER NOT NULL DEFAULT 1,
+      password TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS auth_session (
@@ -26,29 +22,6 @@ export async function initializeDatabase(database: SQLiteDatabase) {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `);
-
-  let migrated = false;
-  await database.withTransactionAsync(async () => {
-    const columns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(users)');
-    if (columns.some((column) => column.name === 'password')) {
-      await database.execAsync(`
-        ALTER TABLE users RENAME COLUMN password TO password_hash;
-        ALTER TABLE users ADD COLUMN password_version INTEGER NOT NULL DEFAULT 0;
-      `);
-    }
-    const legacyUsers = await database.getAllAsync<{ id: number; password_hash: string }>(
-      'SELECT id, password_hash FROM users WHERE password_version = 0',
-    );
-    for (const user of legacyUsers) {
-      const hash = await hashPassword(user.password_hash);
-      await database.runAsync(
-        'UPDATE users SET password_hash = ?, password_version = 1 WHERE id = ?', hash, user.id,
-      );
-    }
-    migrated = legacyUsers.length > 0;
-  });
-  // Remove old WAL frames after replacing legacy credentials.
-  if (migrated) await database.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');
 }
 
 export async function createUser(
@@ -57,12 +30,11 @@ export async function createUser(
   email: string,
   password: string,
 ) {
-  const passwordHash = await hashPassword(password);
   await database.runAsync(
-    'INSERT INTO users (full_name, email, password_hash, password_version) VALUES (?, ?, ?, 1)',
+    'INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)',
     fullName.trim(),
     email.trim().toLowerCase(),
-    passwordHash,
+    password,
   );
 }
 
@@ -71,12 +43,13 @@ export async function loginUser(
   email: string,
   password: string,
 ): Promise<AuthUser | null> {
-  const user = await database.getFirstAsync<AuthUser & { password_hash: string; password_version: number }>(
-    'SELECT id, full_name AS fullName, email, password_hash, password_version FROM users WHERE email = ?',
+  const user = await database.getFirstAsync<AuthUser & { password: string }>(
+    'SELECT id, full_name AS fullName, email, password FROM users WHERE email = ? AND password = ?',
     email.trim().toLowerCase(),
+    password,
   );
 
-  if (!user || user.password_version !== 1 || !(await verifyPassword(password, user.password_hash))) {
+  if (!user) {
     return null;
   }
 
