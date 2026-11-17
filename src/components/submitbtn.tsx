@@ -14,6 +14,8 @@ export default function CustomButton({title, onPress, isSubmitting = false, styl
       onPress={onPress}
       disabled={isSubmitting}
       accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: isSubmitting, busy: isSubmitting }}
     >
       {isSubmitting ? (
         <ActivityIndicator color="#f7f2e8" />

@@ -1,22 +1,28 @@
-import { StyleSheet, Text, TextInput, type TextInputProps, TouchableOpacity, View } from 'react-native';
+import type { ComponentPropsWithRef } from 'react';
+import { StyleSheet, Text, TextInput, type TextInputProps, type StyleProp, type ViewStyle, TouchableOpacity, View } from 'react-native';
 
 type InputProps = TextInputProps & {
+  ref?: ComponentPropsWithRef<typeof TextInput>['ref'];
+  containerStyle?: StyleProp<ViewStyle>;
   type?: 'password';
   isHidden?: boolean;
   togglePasswordVisibility?: () => void;
 };
 
-export default function Input({ type, isHidden = true, togglePasswordVisibility, style, secureTextEntry, ...props }: InputProps) {
+export default function Input({ type, isHidden = true, togglePasswordVisibility, containerStyle, style, secureTextEntry, ...props }: InputProps) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       <TextInput
         {...props}
+        accessibilityLabel={props.accessibilityLabel ?? props.placeholder}
+        underlineColorAndroid="transparent"
         style={[styles.input, style]}
         secureTextEntry={type === 'password' ? isHidden : secureTextEntry}
       />
       {type === 'password' && (
         <TouchableOpacity
           onPress={togglePasswordVisibility}
+          disabled={props.editable === false}
           accessibilityRole="button"
           accessibilityLabel={isHidden ? 'Show password' : 'Hide password'}
           style={styles.toggle}

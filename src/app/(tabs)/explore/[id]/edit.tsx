@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   KeyboardTypeOptions,
   Platform,
@@ -33,17 +32,18 @@ export default function EditMotorScreen() {
 
   const handleSave = async () => {
     if (submitting.current) return;
+    setSaveError(null);
     const parsedPrice = Number(price.trim());
     if (!motor || !Number.isInteger(motorId)) {
-      Alert.alert('Motor not found', 'This motor is no longer available.');
+      setSaveError('This motor is no longer available.');
       return;
     }
     if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imageUrl.trim()) {
-      Alert.alert('Missing fields', 'Please complete all motor details.');
+      setSaveError('Please complete all motor details.');
       return;
     }
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      Alert.alert('Invalid price', 'Enter a price greater than zero.');
+      setSaveError('Enter a price greater than zero.');
       return;
     }
 
@@ -74,7 +74,7 @@ export default function EditMotorScreen() {
     return (
       <MainSafe>
         <View style={styles.notFound}>
-          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/explore')} accessibilityRole="button">
             <Text style={styles.back}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.header}>Motor not found</Text>
@@ -94,15 +94,16 @@ export default function EditMotorScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
         >
-          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/explore')} accessibilityRole="button">
             <Text style={styles.back}>← Back</Text>
           </TouchableOpacity>
 
           <View style={styles.form}>
             <Text style={styles.header}>Edit motor</Text>
-            <MotorField label="Name" value={name} onChangeText={setName} placeholder="Motor name" />
-            <MotorField label="Type" value={type} onChangeText={setType} placeholder="Motor type" />
+            <MotorField editable={!isSubmitting} label="Name" value={name} onChangeText={setName} placeholder="Motor name" />
+            <MotorField editable={!isSubmitting} label="Type" value={type} onChangeText={setType} placeholder="Motor type" />
             <MotorField
+              editable={!isSubmitting}
               label="Price per day (₱)"
               value={price}
               onChangeText={setPrice}
@@ -110,6 +111,7 @@ export default function EditMotorScreen() {
               keyboardType="decimal-pad"
             />
             <MotorField
+              editable={!isSubmitting}
               label="Description"
               value={description}
               onChangeText={setDescription}
@@ -117,6 +119,7 @@ export default function EditMotorScreen() {
               multiline
             />
             <MotorField
+              editable={!isSubmitting}
               label="Image URL"
               value={imageUrl}
               onChangeText={setImageUrl}
@@ -139,6 +142,7 @@ type MotorFieldProps = {
   placeholder: string;
   keyboardType?: KeyboardTypeOptions;
   multiline?: boolean;
+  editable?: boolean;
 };
 
 function MotorField({
@@ -148,6 +152,7 @@ function MotorField({
   placeholder,
   keyboardType,
   multiline = false,
+  editable = true,
 }: MotorFieldProps) {
   return (
     <View style={styles.field}>
@@ -156,6 +161,9 @@ function MotorField({
         accessibilityLabel={label}
         style={[styles.input, multiline && styles.multilineInput]}
         value={value}
+        editable={editable}
+        autoCapitalize={keyboardType === 'url' ? 'none' : 'sentences'}
+        autoCorrect={keyboardType !== 'url'}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#94a3b8"

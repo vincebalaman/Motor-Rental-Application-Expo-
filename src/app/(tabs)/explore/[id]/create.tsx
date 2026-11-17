@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   KeyboardTypeOptions,
   Platform,
@@ -30,13 +29,14 @@ export default function CreateMotorScreen() {
 
   const handleCreate = async () => {
     if (submitting.current) return;
+    setSaveError(null);
     const parsedPrice = Number(price.trim());
     if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imageUrl.trim()) {
-      Alert.alert('Missing fields', 'Please complete all motor details.');
+      setSaveError('Please complete all motor details.');
       return;
     }
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      Alert.alert('Invalid price', 'Enter a price greater than zero.');
+      setSaveError('Enter a price greater than zero.');
       return;
     }
 
@@ -74,15 +74,16 @@ export default function CreateMotorScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
         >
-          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/explore')} accessibilityRole="button">
             <Text style={styles.back}>← Back</Text>
           </TouchableOpacity>
 
           <View style={styles.form}>
             <Text style={styles.header}>Add a motor</Text>
-            <MotorField label="Name" value={name} onChangeText={setName} placeholder="e.g. Yamaha NMAX" />
-            <MotorField label="Type" value={type} onChangeText={setType} placeholder="e.g. Scooter" />
+            <MotorField editable={!isSubmitting} label="Name" value={name} onChangeText={setName} placeholder="e.g. Yamaha NMAX" />
+            <MotorField editable={!isSubmitting} label="Type" value={type} onChangeText={setType} placeholder="e.g. Scooter" />
             <MotorField
+              editable={!isSubmitting}
               label="Price per day (₱)"
               value={price}
               onChangeText={setPrice}
@@ -90,6 +91,7 @@ export default function CreateMotorScreen() {
               keyboardType="decimal-pad"
             />
             <MotorField
+              editable={!isSubmitting}
               label="Description"
               value={description}
               onChangeText={setDescription}
@@ -97,6 +99,7 @@ export default function CreateMotorScreen() {
               multiline
             />
             <MotorField
+              editable={!isSubmitting}
               label="Image URL"
               value={imageUrl}
               onChangeText={setImageUrl}
@@ -119,6 +122,7 @@ type MotorFieldProps = {
   placeholder: string;
   keyboardType?: KeyboardTypeOptions;
   multiline?: boolean;
+  editable?: boolean;
 };
 
 function MotorField({
@@ -128,6 +132,7 @@ function MotorField({
   placeholder,
   keyboardType,
   multiline = false,
+  editable = true,
 }: MotorFieldProps) {
   return (
     <View style={styles.field}>
@@ -136,6 +141,9 @@ function MotorField({
         accessibilityLabel={label}
         style={[styles.input, multiline && styles.multilineInput]}
         value={value}
+        editable={editable}
+        autoCapitalize={keyboardType === 'url' ? 'none' : 'sentences'}
+        autoCorrect={keyboardType !== 'url'}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#94a3b8"
