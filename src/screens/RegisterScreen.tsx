@@ -1,5 +1,4 @@
 import { Link, router } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
 import { type ComponentRef, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -15,10 +14,10 @@ import {
 import Input from "@/components/input";
 import MainSafe from "@/components/mainsafe";
 import SubmitButton from "@/components/submitbtn";
-import { createUser } from "@/database/auth";
+import { getSupabaseClient } from "@/lib/supabase";
+import { authErrorMessage, createAuthService } from "@/services/auth";
 
 export default function RegisterScreen() {
-  const database = useSQLiteContext();
   const emailInput = useRef<ComponentRef<typeof TextInput>>(null);
   const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
   const confirmInput = useRef<ComponentRef<typeof TextInput>>(null);
@@ -82,13 +81,13 @@ export default function RegisterScreen() {
     submitting.current = true;
     setIsSubmitting(true);
     try {
-      await createUser(database, normalizedName, normalizedEmail, password);
-      router.replace({ pathname: '/auth/login', params: { registered: '1' } });
+      const result = await createAuthService(getSupabaseClient()).register(normalizedName, normalizedEmail, password);
+      if (result.needsEmailConfirmation) {
+        router.replace({ pathname: '/auth/login', params: { registered: 'confirm' } });
+      }
+      // If confirmation is disabled, AuthProvider receives the new session directly.
     } catch (error) {
-      const duplicateEmail = error instanceof Error && /UNIQUE constraint failed: users.email/i.test(error.message);
-      setFormError(duplicateEmail
-        ? 'An account with this email already exists. Please log in.'
-        : 'We could not create your account. Please try again.');
+      setFormError(authErrorMessage(error));
     } finally {
       submitting.current = false;
       setIsSubmitting(false);

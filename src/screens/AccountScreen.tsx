@@ -56,6 +56,7 @@ export default function AccountScreen() {
             <Text style={styles.profileLabel}>SIGNED IN AS</Text>
             <Text style={styles.name}>{user.fullName}</Text>
             <Text style={styles.email}>{user.email}</Text>
+            <Text style={styles.email}>{user.role === 'admin' ? 'Administrator' : 'Client'}</Text>
           </View>
         </View>
 

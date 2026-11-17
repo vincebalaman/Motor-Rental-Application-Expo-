@@ -1,5 +1,4 @@
-import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { type ComponentRef, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -7,15 +6,14 @@ import Input from '@/components/input';
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
-import { loginUser } from '@/database/auth';
+import { authErrorMessage } from '@/services/auth';
 
 export default function LoginScreen() {
-  const database = useSQLiteContext();
   const { registered } = useLocalSearchParams<{ registered?: string }>();
   const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
   const submitting = useRef(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const { setUser } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,15 +38,10 @@ export default function LoginScreen() {
     submitting.current = true;
     setIsSubmitting(true);
     try {
-      const user = await loginUser(database, normalizedEmail, password);
-      if (!user) {
-        setFormError('The email or password is incorrect.');
-        return;
-      }
-      setUser(user);
-      router.replace('/dashboard');
-    } catch {
-      setFormError('We could not sign you in. Please try again.');
+      await signIn(normalizedEmail, password);
+      // The root route guard navigates once the shared profile and role are loaded.
+    } catch (error) {
+      setFormError(authErrorMessage(error));
     } finally {
       submitting.current = false;
       setIsSubmitting(false);
@@ -62,7 +55,7 @@ export default function LoginScreen() {
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Log in to your account to continue</Text>
 
-          {registered === '1' && <Text style={styles.success} accessibilityRole="alert">Your account is ready. Log in to continue.</Text>}
+          {registered && <Text style={styles.success} accessibilityRole="alert">{registered === 'confirm' ? 'Check your email to confirm your account, then return here to log in.' : 'Your account is ready. Log in to continue.'}</Text>}
           <View style={styles.form}>
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Email Address</Text>

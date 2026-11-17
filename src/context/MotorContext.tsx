@@ -1,6 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
+import { useAuth } from '@/context/AuthContext';
 import { getMotors, insertMotor, removeMotor, saveMotor, type Motor, type MotorInput } from '@/database/motors';
 
 type MotorContextValue = {
@@ -17,6 +18,10 @@ const MotorContext = createContext<MotorContextValue | null>(null);
 
 export function MotorProvider({ children }: { children: ReactNode }) {
   const database = useSQLiteContext();
+  const { user } = useAuth();
+  const requireAdmin = () => {
+    if (user?.role !== 'admin') throw new Error('Only an administrator can manage motors.');
+  };
   const [motors, setMotors] = useState<Motor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,17 +50,20 @@ export function MotorProvider({ children }: { children: ReactNode }) {
   };
 
   const createMotor = async (input: MotorInput) => {
+    requireAdmin();
     const motor = await insertMotor(database, input);
     setMotors((current) => [...current, motor]);
     return motor;
   };
 
   const updateMotor = async (id: number, input: MotorInput) => {
+    requireAdmin();
     const motor = await saveMotor(database, id, input);
     setMotors((current) => current.map((item) => item.id === id ? motor : item));
   };
 
   const deleteMotor = async (id: number) => {
+    requireAdmin();
     await removeMotor(database, id);
     setMotors((current) => current.filter((motor) => motor.id !== id));
   };

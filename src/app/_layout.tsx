@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
+import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
@@ -9,7 +10,14 @@ import { initializeDatabase } from '@/database';
 
 function AppNavigator() {
   const colorScheme = useColorScheme();
-  const { user, loading, sessionError, retrySession } = useAuth();
+  const { user, loading, sessionError, retrySession, logout } = useAuth();
+  const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+  const returnToLogin = async () => {
+    setLeaving(true); setLeaveError(null);
+    try { await logout(); } catch { setLeaveError('We could not sign you out. Please try again.'); }
+    finally { setLeaving(false); }
+  };
 
   if (loading || sessionError) {
     return (
@@ -21,6 +29,8 @@ function AppNavigator() {
             <>
               <Text style={styles.errorText} accessibilityRole="alert">{sessionError}</Text>
               <SubmitButton title="TRY AGAIN" onPress={retrySession} />
+              <SubmitButton title="RETURN TO LOGIN" onPress={returnToLogin} isSubmitting={leaving} />
+              {leaveError && <Text style={styles.errorText} accessibilityRole="alert">{leaveError}</Text>}
             </>
           )}
         </View>

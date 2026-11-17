@@ -5,10 +5,12 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View 
 import MainSafe from '@/components/mainsafe';
 import ProductCard from '@/components/productcard';
 import SubmitButton from '@/components/submitbtn';
+import { useAuth } from '@/context/AuthContext';
 import { useMotorInventory } from '@/context/MotorContext';
 
 export default function MotorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
   const { motors, deleteMotor } = useMotorInventory();
   const motor = motors.find((m) => m.id === Number(id));
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -57,7 +59,7 @@ export default function MotorDetailScreen() {
               </View>
             </ProductCard>
 
-            <View style={styles.actions}>
+            {user?.role === 'admin' && <View style={styles.actions}>
               <Pressable
                 style={styles.editButton}
                 disabled={isDeleting}
@@ -81,8 +83,8 @@ export default function MotorDetailScreen() {
               >
                 <Text style={styles.deleteButtonText}>Delete motor</Text>
               </Pressable>
-            </View>
-            {confirmingDelete && (
+            </View>}
+            {user?.role === 'admin' && confirmingDelete && (
               <View style={styles.confirmation}>
                 <Text style={styles.confirmationTitle}>Delete {motor.name}?</Text>
                 <Text style={styles.notFoundText}>This removes the motor from the catalog, including after restarting the app.</Text>

@@ -1,9 +1,33 @@
 # Supabase development setup
 
-The backend foundation is prepared. The app still uses its tested local SQLite
-accounts and inventory. Supplying configuration does not switch authentication or
-upload local data. Shared login, booking operations, and recovery screens will be
-connected in the next integration step after the development project is ready.
+Shared authentication is now connected through Supabase. The hosted account/catalog
+migration has been applied to the development project, and the public API recognizes
+the tables. Unauthenticated access to the catalog is denied as expected. Live signup,
+email delivery, login, and restored sessions still need device verification.
+
+The motor catalog remains local for this phase. Client accounts can browse it;
+backend-assigned admins can use its management controls. Moving inventory to Supabase
+is the next phase. Existing device accounts and inventory have not been uploaded.
+
+## Device authentication checklist
+
+1. Restart Metro with `npx expo start --clear` after configuring `.env.local`.
+2. Register a NEW shared account using an email you can access. If the project requires
+   confirmation, follow the email link, then return to the app and log in.
+3. Confirm that Account displays your name, email, and Client role.
+4. Close/reopen the app, then test logout, incorrect passwords, and another account.
+5. To test management controls, assign the intended account's Auth UUID the admin role
+   using the trusted SQL below, then log out and back in. New registrations never
+   assign themselves admin. Account should now display Administrator.
+6. If confirmation email does not arrive, inspect Supabase Auth delivery settings,
+   spam folders, and project email limits. Do not disable confirmation solely to mask
+   a delivery problem. Configure email delivery before testing with the whole team.
+
+The SDK persists sessions, refreshes them while the app is active, and loads roles
+from the protected backend table. Supabase work is deferred out of auth-change
+callbacks to avoid locking the session lifecycle. Network requests have 15-second
+abort limits; session operations have a 20-second deadline and retry/logout controls.
+No client-side password hashing or local-password fallback is used.
 
 ## Create the project
 
@@ -60,28 +84,23 @@ perform this operation. Do not identify an admin by a hard-coded email or signup
 - Images: private `motor-images` bucket, JPEG/PNG/WebP up to 5 MiB. Admins manage
   uploads; clients may read only images linked to unarchived motors. Referenced
   images cannot be deleted through the application.
-- Client: lazy `getSupabaseClient()` validates public configuration and configures
-  PKCE and persisted sessions. The current app does not import or activate it.
+- Client: `getSupabaseClient()` validates public configuration and configures PKCE,
+  persisted sessions, and request deadlines. AuthContext owns token refresh and cleanup.
 
 Bookings and availability locks are intentionally not in this migration. They require
 transactional booking functions and date-conflict constraints in the next phase.
 Archive/maintenance restrictions involving bookings will be added with that schema.
 
-## Before switching the app
+## Remaining integration work
 
-1. Confirm the project and migration are correct; verify a client and an admin using
-   actual Auth sessions and REST/storage requests against the development project.
-2. Generate database TypeScript types from the live project for the client adapter.
-3. Replace local authentication behind AuthContext, with explicit cloud configuration
-   errors, auth-state subscriptions, and AppState-based token refresh cleanup.
-   The prepared client leaves automatic refresh off until that lifecycle is wired.
-4. Test registration, verified email, login, logout, and restored/expired sessions on
-   the iPhone. Preserve the working local database during this transition.
-5. Configure email confirmation/recovery redirects and SMTP delivery. Test with the
-   actual development build/app links; do not assume Expo Go links match release links.
-6. Connect the shared catalog and admin route guards. Remove the local account flow
-   only after the shared account flow passes device tests. Do not silently fall back
-   to a local session when shared authentication fails.
+1. Complete the device authentication checklist above, including a second account.
+2. Generate database TypeScript types from the live project for the inventory adapter.
+3. Configure password recovery email delivery and app/web redirects. Test the full
+   email-to-new-password flow on an actual iPhone before removing the recovery notice.
+4. Connect the shared catalog. Test that an admin change appears on another device
+   and that direct client API writes are rejected by backend policies.
+5. Add transactional booking requests, approvals, cancellations, pickup, and return,
+   including date-conflict constraints and simultaneous-approval tests.
 
 Local accounts do not become cloud identities simply because the same email exists.
 For the initial pilot, the proposed approach is new shared registration. Inventory

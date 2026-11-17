@@ -5,7 +5,18 @@ import { Platform } from 'react-native';
 
 let client: SupabaseClient | undefined;
 
-// Deliberately lazy: adding the backend foundation does not change local startup.
+const fetchWithTimeout: typeof fetch = async (input, options) => {
+  const controller = new AbortController();
+  const signal = options?.signal;
+  const abort = () => controller.abort();
+  if (signal?.aborted) abort();
+  signal?.addEventListener('abort', abort, { once: true });
+  const timer = setTimeout(abort, 15_000);
+  try { return await fetch(input, { ...options, signal: controller.signal }); }
+  finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
+};
+
+// Configuration is validated on demand, before authentication starts.
 export function getSupabaseClient(): SupabaseClient {
   if (client) return client;
   const url = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
@@ -16,6 +27,7 @@ export function getSupabaseClient(): SupabaseClient {
   if (parsedUrl.protocol !== 'https:') throw new Error('Use the HTTPS URL of your Supabase development project.');
   const canPersistSession = Platform.OS !== 'web' || typeof window !== 'undefined';
   client = createClient(url, key, {
+    global: { fetch: fetchWithTimeout },
     auth: {
       storage: canPersistSession ? AsyncStorage : undefined,
       persistSession: canPersistSession,

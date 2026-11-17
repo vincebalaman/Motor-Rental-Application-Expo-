@@ -5,22 +5,17 @@ A mobile application built with **React Native + Expo** for our **Mobile Program
 
 ## Current storage and planned roles
 
-Supabase has been selected for the shared backend. The schema and permissions are
-prepared locally; the app continues using SQLite until the development project is
-connected and tested. Follow the [Supabase setup guide](docs/supabase-setup.md).
+Shared registration, login, sessions, profiles, and roles now use Supabase. Local
+accounts are preserved on the device but cannot sign in to the shared backend; create
+a new shared account and confirm its email. See the [Supabase setup guide](docs/supabase-setup.md).
 
-See the [multi-user implementation plan](docs/multi-user-plan.md) for proposed
-client/admin permissions, shared data, and the admin-approval booking flow.
+The motor catalog still uses local SQLite during this integration phase. Additions,
+edits, and deletions persist on that device. Only accounts with a backend-assigned
+admin role can access management controls. Shared inventory, bookings, and email
+password recovery are the next integration phases.
 
-Accounts, sessions, and the motor catalog are stored locally in SQLite. Motor additions,
-edits, and deletions survive app restarts. The sample inventory is seeded once; deleting
-all motors leaves an empty catalog. Deleted motor records are retained internally for
-future booking references.
-
-The planned multi-user design has clients who browse and book, and admins who manage
-inventory. Roles and bookings are not implemented yet. SQLite currently stores data on
-each device; sharing accounts, availability, and bookings across devices will require a
-shared backend.
+See the [multi-user implementation plan](docs/multi-user-plan.md) for the agreed
+client/admin permissions, shared data, and admin-approval booking flow.
 
 Run `npm test` with Node.js 22.18+ to check inventory persistence, seed rollback, and
 validation against SQLite. These tests exercise the database queries through a Node

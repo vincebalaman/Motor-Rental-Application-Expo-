@@ -3,10 +3,12 @@ import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native
 
 import MainSafe from '@/components/mainsafe';
 import ProductCard from '@/components/productcard';
+import { useAuth } from '@/context/AuthContext';
 import { useMotorInventory } from '@/context/MotorContext';
 
 export default function ExploreScreen() {
   const { motors } = useMotorInventory();
+  const { user } = useAuth();
 
   const handleFabPress = () => {
     router.push({
@@ -44,9 +46,9 @@ export default function ExploreScreen() {
         )}
         ListEmptyComponent={<Text style={styles.emptyText}>No motors to show.</Text>}
       />
-      <Pressable style={styles.fab} onPress={handleFabPress} accessibilityRole="button" accessibilityLabel="Add motor">
+      {user?.role === 'admin' && <Pressable style={styles.fab} onPress={handleFabPress} accessibilityRole="button" accessibilityLabel="Add motor">
         <Text style={styles.fabText}>+</Text>
-      </Pressable>
+      </Pressable>}
     </MainSafe>
   );
 }
