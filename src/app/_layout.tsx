@@ -1,12 +1,10 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import { SQLiteProvider } from 'expo-sqlite';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { initializeDatabase } from '@/database';
 
 function AppNavigator() {
   const colorScheme = useColorScheme();
@@ -50,6 +48,7 @@ function AppNavigator() {
           <Stack.Screen name="(tabs)" />
         </Stack.Protected>
         <Stack.Screen name="auth/forgot-password" />
+        <Stack.Screen name="auth/reset-password" />
         <Stack.Screen name="auth/verify" />
       </Stack>
     </ThemeProvider>
@@ -58,11 +57,9 @@ function AppNavigator() {
 
 export default function RootLayout() {
   return (
-    <SQLiteProvider databaseName="motor-rental.db" onInit={initializeDatabase}>
-      <AuthProvider>
-        <AppNavigator />
-      </AuthProvider>
-    </SQLiteProvider>
+    <AuthProvider>
+      <AppNavigator />
+    </AuthProvider>
   );
 }
 

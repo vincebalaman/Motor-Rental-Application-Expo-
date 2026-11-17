@@ -16,9 +16,19 @@ trap cleanup EXIT INT TERM
 "$POSTGRES_BIN/psql" -X -h "$TEST_ROOT" -d postgres -v ON_ERROR_STOP=1 \
   -f supabase/tests/bootstrap.sql \
   -f supabase/migrations/20261117000100_accounts_and_inventory.sql \
-  -f supabase/tests/permissions.sql >"$TEST_ROOT/results.log" 2>&1 || {
+  -f supabase/migrations/20261117000200_local_motor_import.sql \
+  -f supabase/tests/permissions.sql \
+  -f supabase/tests/local-import.sql >"$TEST_ROOT/results.log" 2>&1 || {
     cat "$TEST_ROOT/results.log"
     exit 1
   }
+# Concurrent requests must resolve to one shared motor and mapping.
+"$POSTGRES_BIN/psql" -X -h "$TEST_ROOT" -d postgres -v ON_ERROR_STOP=1 -f supabase/tests/import-concurrent.sql >"$TEST_ROOT/concurrent-1.log" 2>&1 &
+FIRST_PID=$!
+"$POSTGRES_BIN/psql" -X -h "$TEST_ROOT" -d postgres -v ON_ERROR_STOP=1 -f supabase/tests/import-concurrent.sql >"$TEST_ROOT/concurrent-2.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
+"$POSTGRES_BIN/psql" -X -h "$TEST_ROOT" -d postgres -v ON_ERROR_STOP=1 -f supabase/tests/import-concurrent-check.sql >>"$TEST_ROOT/results.log"
 tail -5 "$TEST_ROOT/results.log"
 echo "Local PostgreSQL test logs: $TEST_ROOT"

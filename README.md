@@ -9,10 +9,15 @@ Shared registration, login, sessions, profiles, and roles now use Supabase. Loca
 accounts are preserved on the device but cannot sign in to the shared backend; create
 a new shared account and confirm its email. See the [Supabase setup guide](docs/supabase-setup.md).
 
-The motor catalog still uses local SQLite during this integration phase. Additions,
-edits, and deletions persist on that device. Only accounts with a backend-assigned
-admin role can access management controls. Shared inventory, bookings, and email
-password recovery are the next integration phases.
+The motor catalog now reads and writes Supabase. Backend-assigned admins create,
+edit, and archive shared listings; clients browse them. Explore refreshes on return,
+app foreground, and pull-to-refresh. The app no longer initializes SQLite at startup;
+existing local data remains on the device and is not imported automatically.
+
+The shared catalog starts empty. Assign an admin account using the setup guide, then
+add the first listing or use the admin-only import preview on the original phone.
+The import requires the second SQL migration described in the setup guide and preserves
+local motor records. Bookings and email password recovery are the next phases.
 
 See the [multi-user implementation plan](docs/multi-user-plan.md) for the agreed
 client/admin permissions, shared data, and admin-approval booking flow.

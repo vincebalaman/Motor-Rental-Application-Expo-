@@ -15,6 +15,7 @@ import {
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useMotorInventory } from '@/context/MotorContext';
+import { inventoryErrorMessage } from '@/services/inventory';
 
 export default function CreateMotorScreen() {
   const { createMotor } = useMotorInventory();
@@ -22,7 +23,7 @@ export default function CreateMotorScreen() {
   const [type, setType] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imagePath, setImagePath] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const submitting = useRef(false);
@@ -31,7 +32,7 @@ export default function CreateMotorScreen() {
     if (submitting.current) return;
     setSaveError(null);
     const parsedPrice = Number(price.trim());
-    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imageUrl.trim()) {
+    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imagePath.trim()) {
       setSaveError('Please complete all motor details.');
       return;
     }
@@ -49,14 +50,14 @@ export default function CreateMotorScreen() {
         type: type.trim(),
         price: parsedPrice,
         description: description.trim(),
-        imageUrl: imageUrl.trim(),
+        imagePath: imagePath.trim(),
       });
       router.replace({
         pathname: '/(tabs)/explore/[id]',
         params: { id: String(motor.id) },
       });
-    } catch {
-      setSaveError('We could not create this motor. Your details are still here; please try again.');
+    } catch (error) {
+      setSaveError(inventoryErrorMessage(error));
     } finally {
       submitting.current = false;
       setIsSubmitting(false);
@@ -100,10 +101,10 @@ export default function CreateMotorScreen() {
             />
             <MotorField
               editable={!isSubmitting}
-              label="Image URL"
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              placeholder="https://example.com/motor.jpg"
+              label="Image URL or storage path"
+              value={imagePath}
+              onChangeText={setImagePath}
+              placeholder="https://example.com/motor.jpg or motors/photo.jpg"
               keyboardType="url"
             />
             {saveError && <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text>}

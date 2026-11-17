@@ -1,4 +1,5 @@
-import { router } from 'expo-router';
+import { useCallback } from 'react';
+import { router, useFocusEffect } from 'expo-router';
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
@@ -7,7 +8,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useMotorInventory } from '@/context/MotorContext';
 
 export default function ExploreScreen() {
-  const { motors } = useMotorInventory();
+  const { motors, refreshing, refreshError, refresh } = useMotorInventory();
+  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
   const { user } = useAuth();
 
   const handleFabPress = () => {
@@ -21,6 +23,14 @@ export default function ExploreScreen() {
     <MainSafe>
       <FlatList
         data={motors}
+        refreshing={refreshing}
+        onRefresh={refresh}
+        ListHeaderComponent={<View>
+          {refreshError && <Text accessibilityRole="alert" style={styles.emptyText}>{refreshError}</Text>}
+          {user?.role === 'admin' && <Pressable accessibilityRole="button" style={styles.importButton} onPress={() => router.push('/explore/import')}>
+            <Text style={styles.importText}>Import motors from this device</Text>
+          </Pressable>}
+        </View>}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
@@ -33,7 +43,9 @@ export default function ExploreScreen() {
             }
             accessibilityLabel={`View ${item.name} details`}
           >
-            <Image source={{ uri: item.imageUrl }} style={styles.image} accessibilityLabel={`${item.name} image`} />
+            {item.imageUrl
+              ? <Image source={{ uri: item.imageUrl }} style={styles.image} accessibilityLabel={`${item.name} image`} />
+              : <View style={styles.image}><Text style={styles.emptyText}>Image unavailable</Text></View>}
             <View style={styles.cardContent}>
               <View style={styles.motorDetails}>
                 <Text style={styles.name}>{item.name}</Text>
@@ -44,7 +56,7 @@ export default function ExploreScreen() {
             </View>
           </ProductCard>
         )}
-        ListEmptyComponent={<Text style={styles.emptyText}>No motors to show.</Text>}
+        ListEmptyComponent={<Text style={styles.emptyText}>No shared motors yet. An administrator can add the first listing. Pull down to refresh.</Text>}
       />
       {user?.role === 'admin' && <Pressable style={styles.fab} onPress={handleFabPress} accessibilityRole="button" accessibilityLabel="Add motor">
         <Text style={styles.fabText}>+</Text>
@@ -54,6 +66,8 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
+  importButton: { padding: 16, borderRadius: 10, backgroundColor: '#e2ebe8', marginBottom: 16 },
+  importText: { color: '#21484a', fontSize: 14, fontWeight: '700' },
   list: { padding: 24, paddingTop: 64, gap: 12 },
   image: { width: '100%', height: 180, borderRadius: 12, backgroundColor: '#1e293b' },
   cardContent: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },

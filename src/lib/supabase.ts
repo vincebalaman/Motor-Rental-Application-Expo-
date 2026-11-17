@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 
 let client: SupabaseClient | undefined;
+let recoveryClient: SupabaseClient | undefined;
 
 const fetchWithTimeout: typeof fetch = async (input, options) => {
   const controller = new AbortController();
@@ -37,4 +38,27 @@ export function getSupabaseClient(): SupabaseClient {
     },
   });
   return client;
+}
+
+
+// Separate storage and auth events prevent reset links from replacing normal login.
+export function getRecoveryClient(): SupabaseClient {
+  if (recoveryClient) return recoveryClient;
+  // Validate the project configuration through the same path as normal login.
+  getSupabaseClient();
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL!.trim();
+  const key = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!.trim();
+  const canPersistSession = Platform.OS !== 'web' || typeof window !== 'undefined';
+  recoveryClient = createClient(url, key, {
+    global: { fetch: fetchWithTimeout },
+    auth: {
+      storageKey: `motor-rental-recovery-${new URL(url).hostname}`,
+      storage: canPersistSession ? AsyncStorage : undefined,
+      persistSession: canPersistSession,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      flowType: 'pkce',
+    },
+  });
+  return recoveryClient;
 }

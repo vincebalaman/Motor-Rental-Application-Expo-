@@ -2,12 +2,62 @@
 
 Shared authentication is now connected through Supabase. The hosted account/catalog
 migration has been applied to the development project, and the public API recognizes
-the tables. Unauthenticated access to the catalog is denied as expected. Live signup,
-email delivery, login, and restored sessions still need device verification.
+the tables. Unauthenticated access to the catalog is denied as expected. Shared login, logout, the Client role, and session restoration have been verified
+on the iPhone. Shared inventory still needs the cross-device checklist below.
 
-The motor catalog remains local for this phase. Client accounts can browse it;
-backend-assigned admins can use its management controls. Moving inventory to Supabase
-is the next phase. Existing device accounts and inventory have not been uploaded.
+The motor catalog is now connected to Supabase. Clients browse the shared catalog;
+backend-assigned admins create, edit, and archive listings. Existing SQLite data stays
+on the device; there is no automatic seeding or upload into the shared database.
+The app no longer opens the local database during normal startup.
+
+## Import the original phone's SQLite motors
+
+1. In Supabase SQL Editor, run the entire new migration
+   `supabase/migrations/20261117000200_local_motor_import.sql` once. It adds an
+   admin-only import function and mapping table. Do not rerun the original migration.
+2. On the phone holding the original SQLite catalog, log in as an Administrator and
+   open Explore → **Import motors from this device**.
+3. Review the active motor names, descriptions, prices, and image URLs. Select the
+   motors you want, then press **IMPORT … SELECTED**. Archived local motors are excluded.
+4. Wait for the per-motor results. Completed imports are marked Imported. Unconfirmed
+   items may be retried; the server returns the same cloud motor if a previous request
+   committed but its response was lost. Use Stop to stop after the current motor.
+5. Return to Explore, then refresh the client catalog on another device.
+
+The tool never seeds local sample rows or imports accounts/passwords. It adds a small
+`motor_import_metadata` table holding a stable source ID; existing motor records remain
+unchanged. Supabase creates the motor and its source/local-ID mapping atomically.
+Concurrent requests for the same source record produce one motor. An archived imported
+motor is still treated as imported and will not be resurrected by retrying.
+
+This is a one-time copy, not ongoing SQLite-to-cloud synchronization. Make subsequent
+edits in the shared catalog. Separate device databases have separate identities, so
+import your original catalog from one device rather than every team member's samples.
+Only HTTPS image references can be imported; local image files need a separate upload.
+
+## Shared inventory device checklist
+
+1. Assign your intended Auth user the admin role with the trusted SQL below, then
+   log out and back in. Account should display Administrator and Explore should show +.
+2. The shared catalog is initially empty. Add a motor with name, type, description,
+   PHP daily price (up to two decimal places), and an image reference.
+3. Image references can be HTTPS URLs, or relative object paths such as
+   `motors/photo.jpg` in the private `motor-images` bucket. Upload bucket images through
+   Supabase Storage first; an in-app image picker/upload UI is a later enhancement.
+   Private paths are converted to temporary signed URLs; the form retains the path,
+   not an expiring signed URL. Missing images show a placeholder.
+4. Sign in as a client on another device/browser. Open Explore or pull down to refresh;
+   confirm the new motor appears and management controls are absent.
+5. Edit the motor as admin, then refresh on the client. Delete with confirmation and
+   refresh again; it should disappear from both catalogs. Backend rows are archived,
+   preserving future history. Online access is required to confirm changes.
+6. Test two admin edit forms open on the same motor. After one saves, the other's
+   stale save must report a conflict rather than silently overwrite the first change.
+
+Refresh failures keep the last loaded catalog and show a message. An initial load
+failure has a retry screen. A background refresh does not discard an open form.
+Images are re-signed when inventory reloads; active apps refresh them every 45 minutes.
+This is refresh-based synchronization, not a realtime subscription.
 
 ## Device authentication checklist
 
@@ -94,11 +144,11 @@ Archive/maintenance restrictions involving bookings will be added with that sche
 ## Remaining integration work
 
 1. Complete the device authentication checklist above, including a second account.
-2. Generate database TypeScript types from the live project for the inventory adapter.
+2. Generate database TypeScript types from the live project as the schema grows.
 3. Configure password recovery email delivery and app/web redirects. Test the full
    email-to-new-password flow on an actual iPhone before removing the recovery notice.
-4. Connect the shared catalog. Test that an admin change appears on another device
-   and that direct client API writes are rejected by backend policies.
+4. Complete the shared inventory device checklist above and verify hosted storage
+   signing with an uploaded image. Local SQL policies have already been tested.
 5. Add transactional booking requests, approvals, cancellations, pickup, and return,
    including date-conflict constraints and simultaneous-approval tests.
 
@@ -116,7 +166,7 @@ imports will be an explicit admin task, with UUID mapping, and will run once.
 
 Backend tests start a temporary PostgreSQL instance using only a private Unix socket,
 apply minimal stand-ins for Supabase's Auth/Storage interfaces, and execute the actual
-migration under guest/client/admin roles. The server stops afterward; test logs stay
+migrations under guest/client/admin roles, including concurrent import retry checks. The server stops afterward; test logs stay
 in the printed temporary directory. These checks verify SQL policies and triggers;
 they do not verify hosted email delivery, Storage API limits, or a live Supabase login.
 

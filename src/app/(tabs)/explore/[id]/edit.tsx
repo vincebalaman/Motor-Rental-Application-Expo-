@@ -15,17 +15,19 @@ import {
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useMotorInventory } from '@/context/MotorContext';
+import { inventoryErrorMessage } from '@/services/inventory';
 
 export default function EditMotorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const motorId = Number(Array.isArray(id) ? id[0] : id);
+  const motorId = Array.isArray(id) ? id[0] : id;
   const { motors, updateMotor } = useMotorInventory();
   const motor = motors.find((item) => item.id === motorId);
+  const [originalUpdatedAt] = useState(motor?.updatedAt ?? '');
   const [name, setName] = useState(motor?.name ?? '');
   const [type, setType] = useState(motor?.type ?? '');
   const [price, setPrice] = useState(motor ? String(motor.price) : '');
   const [description, setDescription] = useState(motor?.description ?? '');
-  const [imageUrl, setImageUrl] = useState(motor?.imageUrl ?? '');
+  const [imagePath, setImagePath] = useState(motor?.imagePath ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const submitting = useRef(false);
@@ -34,11 +36,11 @@ export default function EditMotorScreen() {
     if (submitting.current) return;
     setSaveError(null);
     const parsedPrice = Number(price.trim());
-    if (!motor || !Number.isInteger(motorId)) {
+    if (!motor || !motorId) {
       setSaveError('This motor is no longer available.');
       return;
     }
-    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imageUrl.trim()) {
+    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imagePath.trim()) {
       setSaveError('Please complete all motor details.');
       return;
     }
@@ -56,14 +58,14 @@ export default function EditMotorScreen() {
         type: type.trim(),
         price: parsedPrice,
         description: description.trim(),
-        imageUrl: imageUrl.trim(),
-      });
+        imagePath: imagePath.trim(),
+      }, originalUpdatedAt);
       router.replace({
         pathname: '/(tabs)/explore/[id]',
         params: { id: String(motorId) },
       });
-    } catch {
-      setSaveError('We could not save this motor. Your details are still here; please try again.');
+    } catch (error) {
+      setSaveError(inventoryErrorMessage(error));
     } finally {
       submitting.current = false;
       setIsSubmitting(false);
@@ -120,10 +122,10 @@ export default function EditMotorScreen() {
             />
             <MotorField
               editable={!isSubmitting}
-              label="Image URL"
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              placeholder="https://example.com/motor.jpg"
+              label="Image URL or storage path"
+              value={imagePath}
+              onChangeText={setImagePath}
+              placeholder="https://example.com/motor.jpg or motors/photo.jpg"
               keyboardType="url"
             />
             {saveError && <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text>}

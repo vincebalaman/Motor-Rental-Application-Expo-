@@ -7,12 +7,13 @@ import ProductCard from '@/components/productcard';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
 import { useMotorInventory } from '@/context/MotorContext';
+import { inventoryErrorMessage } from '@/services/inventory';
 
 export default function MotorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { motors, deleteMotor } = useMotorInventory();
-  const motor = motors.find((m) => m.id === Number(id));
+  const motor = motors.find((m) => m.id === (Array.isArray(id) ? id[0] : id));
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -24,10 +25,10 @@ export default function MotorDetailScreen() {
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await deleteMotor(motor.id);
+      await deleteMotor(motor.id, motor.updatedAt);
       router.replace('/(tabs)/explore');
-    } catch {
-      setDeleteError('We could not delete this motor. Please try again.');
+    } catch (error) {
+      setDeleteError(inventoryErrorMessage(error));
     } finally {
       deleting.current = false;
       setIsDeleting(false);
@@ -37,7 +38,7 @@ export default function MotorDetailScreen() {
   return (
     <MainSafe>
       <ScrollView contentContainerStyle={styles.container}>
-        <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
+        <TouchableOpacity onPress={() => router.replace('/explore')} accessibilityRole="button">
           <Text style={styles.back}>← Explore</Text>
         </TouchableOpacity>
 
@@ -45,11 +46,11 @@ export default function MotorDetailScreen() {
           <View style={styles.content}>
             <Text style={styles.eyebrow}>MOTOR DETAILS</Text>
             <ProductCard>
-              <Image
+              {motor.imageUrl ? <Image
                 source={{ uri: motor.imageUrl }}
                 style={styles.image}
                 accessibilityLabel={`${motor.name} image`}
-              />
+              /> : <View style={styles.image}><Text style={styles.notFoundText}>Image unavailable</Text></View>}
               <View style={styles.cardContent}>
                 <Text style={styles.type}>{motor.type}</Text>
                 <Text style={styles.title}>{motor.name}</Text>
