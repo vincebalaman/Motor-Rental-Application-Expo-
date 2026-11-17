@@ -1,17 +1,19 @@
-import { Link, router } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
-import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Link, useLocalSearchParams } from 'expo-router';
+import { type ComponentRef, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import Input from '@/components/input';
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
-import { loginUser } from '@/database/auth';
+import { authErrorMessage } from '@/services/auth';
 
 export default function LoginScreen() {
-  const database = useSQLiteContext();
-  const { setUser } = useAuth();
+  const { registered, passwordReset } = useLocalSearchParams<{ registered?: string; passwordReset?: string }>();
+  const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
+  const submitting = useRef(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,84 +24,106 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Missing Fields', 'Please enter your email and password.');
+    if (submitting.current) return;
+    setFormError(null);
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
+      setFormError('Please enter your email and password.');
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setFormError('Please enter a valid email address.');
+      return;
+    }
+    submitting.current = true;
     setIsSubmitting(true);
     try {
-      const user = await loginUser(database, email, password);
-      if (!user) {
-        Alert.alert('Login Failed', 'The email or password is incorrect.');
-        return;
-      }
-      setUser(user);
-      router.replace('/dashboard');
-    } catch {
-      Alert.alert('Login Failed', 'We could not sign you in. Please try again.');
+      await signIn(normalizedEmail, password);
+      // The root route guard navigates once the shared profile and role are loaded.
+    } catch (error) {
+      setFormError(authErrorMessage(error));
     } finally {
+      submitting.current = false;
       setIsSubmitting(false);
     }
   };
 
   return (
     <MainSafe>
-      <View style={styles.container}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Log in to your account to continue</Text>
+      <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Log in to your account to continue</Text>
 
-        <View style={styles.form}>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Email Address</Text>
-            <Input
-              style={styles.input}
-              placeholder="Enter your email address"
-              placeholderTextColor="#94a3b8"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+          {passwordReset && <Text style={styles.success} accessibilityRole="alert">Password updated. Log in with your new password.</Text>}
+          {registered && <Text style={styles.success} accessibilityRole="alert">{registered === 'confirm' ? 'Check your email to confirm your account, then return here to log in.' : 'Your account is ready. Log in to continue.'}</Text>}
+          <View style={styles.form}>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Email Address</Text>
+              <Input
+                placeholder="Enter your email address"
+                placeholderTextColor="#94a3b8"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => passwordInput.current?.focus()}
+                editable={!isSubmitting}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Password</Text>
+              <Input
+                ref={passwordInput}
+                placeholder="Enter your password"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="current-password"
+                returnKeyType="go"
+                onSubmitEditing={handleLogin}
+                editable={!isSubmitting}
+                placeholderTextColor="#94a3b8"
+                value={password}
+                onChangeText={setPassword}
+                type="password"
+                isHidden={isPasswordHidden}
+                togglePasswordVisibility={togglePasswordVisibility}
+              />
+            </View>
+
+            <View style={styles.forgotPassword}>
+              <Link href="/auth/forgot-password">
+                <Text style={styles.footerLink}>Forgot Password?</Text>
+              </Link>
+            </View>
+
+            {formError && <Text style={styles.error} accessibilityRole="alert">{formError}</Text>}
+            <SubmitButton title="LOG IN" isSubmitting={isSubmitting} onPress={handleLogin} />
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Do not have an account? </Text>
+              <Link href="/auth/register">
+                <Text style={styles.footerLink}>Sign Up</Text>
+              </Link>
+            </View>
           </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Password</Text>
-            <Input
-              placeholder="Enter your password"
-              placeholderTextColor="#94a3b8"
-              value={password}
-              onChangeText={setPassword}
-              type="password"
-              isHidden={isPasswordHidden}
-              togglePasswordVisibility={togglePasswordVisibility}
-            />
-          </View>
-
-          <View style={styles.forgotPassword}>
-            <Link href="/auth/forgot-password">
-              <Text style={styles.footerLink}>Forgot Password?</Text>
-            </Link>
-          </View>
-
-          <SubmitButton title="LOG IN"
-          isSubmitting={isSubmitting}
-          onPress={handleLogin}/>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Do not have an account? </Text>
-            <Link href="/auth/register">
-              <Text style={styles.footerLink}>Sign Up</Text>
-            </Link>
-          </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </MainSafe>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardView: { flex: 1 },
+  error: { color: '#991b1b', fontSize: 14, lineHeight: 21 },
+  success: { color: '#21484a', fontSize: 14, lineHeight: 21, marginBottom: 16 },
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 24,
     paddingTop: 60,
   },
@@ -125,16 +149,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#334155',
     marginLeft: 2,
-  },
-  input: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   button: {
     backgroundColor: '#3b82f6',

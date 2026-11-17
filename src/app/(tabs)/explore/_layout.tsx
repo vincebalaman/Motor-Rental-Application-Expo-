@@ -1,14 +1,44 @@
 import { Stack } from 'expo-router';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { MotorProvider } from '@/context/MotorContext';
+import MainSafe from '@/components/mainsafe';
+import SubmitButton from '@/components/submitbtn';
+import { useAuth } from '@/context/AuthContext';
+import { useMotorInventory } from '@/context/MotorContext';
 
-export default function ExploreLayout() {
+function InventoryNavigator() {
+  const { user } = useAuth();
+  const { loading, error, retry } = useMotorInventory();
+  if (loading || error) {
+    return (
+      <MainSafe>
+        <View style={styles.status}>
+          {loading ? <ActivityIndicator color="#21484a" accessibilityLabel="Loading motors" /> : (
+            <>
+              <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
+              <SubmitButton title="TRY AGAIN" onPress={retry} />
+            </>
+          )}
+        </View>
+      </MainSafe>
+    );
+  }
   return (
-    <MotorProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="[id]" />
-      </Stack>
-    </MotorProvider>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="[id]" />
+      <Stack.Protected guard={user?.role === 'admin'} redirectTo="/explore">
+        <Stack.Screen name="import" />
+      </Stack.Protected>
+    </Stack>
   );
 }
+
+export default function ExploreLayout() {
+  return <InventoryNavigator />;
+}
+
+const styles = StyleSheet.create({
+  status: { flex: 1, justifyContent: 'center', padding: 24, gap: 16 },
+  error: { color: '#991b1b', fontSize: 16, textAlign: 'center' },
+});

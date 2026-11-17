@@ -44,3 +44,10 @@ example
 
 # local accounts
 localacc.txt
+
+# Backend configuration
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/

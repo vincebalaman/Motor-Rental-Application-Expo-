@@ -1,8 +1,6 @@
 import { Link, router } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
-import { useState } from "react";
+import { type ComponentRef, useRef, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,10 +14,16 @@ import {
 import Input from "@/components/input";
 import MainSafe from "@/components/mainsafe";
 import SubmitButton from "@/components/submitbtn";
-import { createUser } from "@/database/auth";
+import { getSupabaseClient } from "@/lib/supabase";
+import { authErrorMessage, createAuthService } from "@/services/auth";
 
 export default function RegisterScreen() {
-  const database = useSQLiteContext();
+  const emailInput = useRef<ComponentRef<typeof TextInput>>(null);
+  const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
+  const confirmInput = useRef<ComponentRef<typeof TextInput>>(null);
+  const submitting = useRef(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isConfirmPasswordHidden, setIsConfirmPasswordHidden] = useState(true);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,22 +38,24 @@ export default function RegisterScreen() {
   };
 
   const handleCreateAccount = async () => {
+    if (submitting.current) return;
+    setFormError(null);
     const normalizedName = fullName.trim();
     const normalizedEmail = email.trim().toLowerCase();
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!normalizedName || !normalizedEmail || !password || !confirmPassword) {
-      Alert.alert("Missing details", "Please complete every field to continue.");
+      setFormError("Please complete every field to continue.");
       return;
     }
 
     if (normalizedName.length < 2) {
-      Alert.alert("Check your name", "Please enter your full name.");
+      setFormError("Please enter your full name.");
       return;
     }
 
     if (!emailPattern.test(normalizedEmail)) {
-      Alert.alert("Check your email", "Please enter a valid email address.");
+      setFormError("Please enter a valid email address.");
       return;
     }
 
@@ -58,43 +64,32 @@ export default function RegisterScreen() {
       !/[A-Za-z]/.test(password) ||
       !/\d/.test(password)
     ) {
-      Alert.alert(
-        "Create a stronger password",
-        "Use at least 8 characters, including one letter and one number.",
-      );
+      setFormError("Use at least 8 characters, including one letter and one number.");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert(
-        "Passwords do not match",
-        "Re-enter the same password in both fields.",
-      );
+      setFormError("Re-enter the same password in both fields.");
       return;
     }
 
     if (!acceptedTerms) {
-      Alert.alert(
-        "Almost there",
-        "Please agree to the rental terms before creating your account.",
-      );
+      setFormError("Please agree to the rental terms before creating your account.");
       return;
     }
 
+    submitting.current = true;
     setIsSubmitting(true);
     try {
-      await createUser(database, normalizedName, normalizedEmail, password);
-      Alert.alert(
-        "You are ready to ride",
-        "Your account has been created successfully.",
-        [{ text: "Continue", onPress: () => router.replace("/auth/login") }],
-      );
-    } catch {
-      Alert.alert(
-        "Registration failed",
-        "An account with this email already exists.",
-      );
+      const result = await createAuthService(getSupabaseClient()).register(normalizedName, normalizedEmail, password);
+      if (result.needsEmailConfirmation) {
+        router.replace({ pathname: '/auth/login', params: { registered: 'confirm' } });
+      }
+      // If confirmation is disabled, AuthProvider receives the new session directly.
+    } catch (error) {
+      setFormError(authErrorMessage(error));
     } finally {
+      submitting.current = false;
       setIsSubmitting(false);
     }
   };
@@ -112,7 +107,7 @@ export default function RegisterScreen() {
         >
           <Pressable
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => router.canGoBack() ? router.back() : router.replace("/auth/login")}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
@@ -149,6 +144,10 @@ export default function RegisterScreen() {
                 autoCapitalize="words"
                 autoComplete="name"
                 returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => emailInput.current?.focus()}
+                editable={!isSubmitting}
+                accessibilityLabel="Full name"
                 onFocus={() => setFocusedField("name")}
                 onBlur={() => setFocusedField(null)}
               />
@@ -161,6 +160,7 @@ export default function RegisterScreen() {
                   styles.input,
                   focusedField === "email" && styles.inputFocused,
                 ]}
+                ref={emailInput}
                 placeholder="you@example.com"
                 placeholderTextColor="#9a9b91"
                 value={email}
@@ -170,6 +170,10 @@ export default function RegisterScreen() {
                 autoComplete="email"
                 autoCorrect={false}
                 returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => passwordInput.current?.focus()}
+                editable={!isSubmitting}
+                accessibilityLabel="Email address"
                 onFocus={() => setFocusedField("email")}
                 onBlur={() => setFocusedField(null)}
               />
@@ -178,7 +182,12 @@ export default function RegisterScreen() {
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Password</Text>
               <Input
+                ref={passwordInput}
                 value={password}
+                containerStyle={[styles.passwordInput, focusedField === 'password' && styles.inputFocused]}
+                autoComplete="new-password"
+                autoCapitalize="none"
+                editable={!isSubmitting}
                 placeholder="Create a password"
                 type="password"
                 onChangeText={setPassword}
@@ -186,6 +195,8 @@ export default function RegisterScreen() {
                 togglePasswordVisibility={togglePasswordVisibility}
                 autoCorrect={false}
                 returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => confirmInput.current?.focus()}
                 onFocus={() => setFocusedField("password")}
                 onBlur={() => setFocusedField(null)}
               />
@@ -194,12 +205,17 @@ export default function RegisterScreen() {
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Confirm password</Text>
               <Input
+                ref={confirmInput}
                 placeholder="Re-enter your password"
+                containerStyle={[styles.passwordInput, focusedField === 'confirmPassword' && styles.inputFocused]}
+                autoComplete="new-password"
+                autoCapitalize="none"
+                editable={!isSubmitting}
                 value={confirmPassword}
                 type="password"
                 onChangeText={setConfirmPassword}
-                isHidden={isPasswordHidden}
-                togglePasswordVisibility={togglePasswordVisibility}
+                isHidden={isConfirmPasswordHidden}
+                togglePasswordVisibility={() => setIsConfirmPasswordHidden((hidden) => !hidden)}
                 autoCorrect={false}
                 returnKeyType="done"
                 onSubmitEditing={handleCreateAccount}
@@ -211,6 +227,7 @@ export default function RegisterScreen() {
             <Pressable
               style={styles.termsRow}
               onPress={() => setAcceptedTerms((accepted) => !accepted)}
+              disabled={isSubmitting}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: acceptedTerms }}
             >
@@ -229,6 +246,7 @@ export default function RegisterScreen() {
               </Text>
             </Pressable>
 
+            {formError && <Text style={styles.error} accessibilityRole="alert">{formError}</Text>}
             <SubmitButton
               title="CREATE ACCOUNT →"
               onPress={handleCreateAccount}
@@ -250,6 +268,8 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
+  error: { color: '#991b1b', fontSize: 14, lineHeight: 21 },
+  passwordInput: { borderColor: '#d9d2c4', borderRadius: 4, paddingHorizontal: 15 },
   safeArea: {
     flex: 1,
     backgroundColor: "#f3efe6",

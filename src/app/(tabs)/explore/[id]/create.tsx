@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   KeyboardTypeOptions,
   Platform,
@@ -16,6 +15,7 @@ import {
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useMotorInventory } from '@/context/MotorContext';
+import { inventoryErrorMessage } from '@/services/inventory';
 
 export default function CreateMotorScreen() {
   const { createMotor } = useMotorInventory();
@@ -23,30 +23,45 @@ export default function CreateMotorScreen() {
   const [type, setType] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imagePath, setImagePath] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const submitting = useRef(false);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
+    if (submitting.current) return;
+    setSaveError(null);
     const parsedPrice = Number(price.trim());
-    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imageUrl.trim()) {
-      Alert.alert('Missing fields', 'Please complete all motor details.');
+    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imagePath.trim()) {
+      setSaveError('Please complete all motor details.');
       return;
     }
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      Alert.alert('Invalid price', 'Enter a price greater than zero.');
+      setSaveError('Enter a price greater than zero.');
       return;
     }
 
-    const motor = createMotor({
-      name: name.trim(),
-      type: type.trim(),
-      price: parsedPrice,
-      description: description.trim(),
-      imageUrl: imageUrl.trim(),
-    });
-    router.replace({
-      pathname: '/(tabs)/explore/[id]',
-      params: { id: String(motor.id) },
-    });
+    submitting.current = true;
+    setIsSubmitting(true);
+    setSaveError(null);
+    try {
+      const motor = await createMotor({
+        name: name.trim(),
+        type: type.trim(),
+        price: parsedPrice,
+        description: description.trim(),
+        imagePath: imagePath.trim(),
+      });
+      router.replace({
+        pathname: '/(tabs)/explore/[id]',
+        params: { id: String(motor.id) },
+      });
+    } catch (error) {
+      setSaveError(inventoryErrorMessage(error));
+    } finally {
+      submitting.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -60,15 +75,16 @@ export default function CreateMotorScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
         >
-          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/explore')} accessibilityRole="button">
             <Text style={styles.back}>← Back</Text>
           </TouchableOpacity>
 
           <View style={styles.form}>
             <Text style={styles.header}>Add a motor</Text>
-            <MotorField label="Name" value={name} onChangeText={setName} placeholder="e.g. Yamaha NMAX" />
-            <MotorField label="Type" value={type} onChangeText={setType} placeholder="e.g. Scooter" />
+            <MotorField editable={!isSubmitting} label="Name" value={name} onChangeText={setName} placeholder="e.g. Yamaha NMAX" />
+            <MotorField editable={!isSubmitting} label="Type" value={type} onChangeText={setType} placeholder="e.g. Scooter" />
             <MotorField
+              editable={!isSubmitting}
               label="Price per day (₱)"
               value={price}
               onChangeText={setPrice}
@@ -76,6 +92,7 @@ export default function CreateMotorScreen() {
               keyboardType="decimal-pad"
             />
             <MotorField
+              editable={!isSubmitting}
               label="Description"
               value={description}
               onChangeText={setDescription}
@@ -83,13 +100,15 @@ export default function CreateMotorScreen() {
               multiline
             />
             <MotorField
-              label="Image URL"
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              placeholder="https://example.com/motor.jpg"
+              editable={!isSubmitting}
+              label="Image URL or storage path"
+              value={imagePath}
+              onChangeText={setImagePath}
+              placeholder="https://example.com/motor.jpg or motors/photo.jpg"
               keyboardType="url"
             />
-            <SubmitButton title="CREATE MOTOR" onPress={handleCreate} />
+            {saveError && <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text>}
+            <SubmitButton title="CREATE MOTOR" onPress={handleCreate} isSubmitting={isSubmitting} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -104,6 +123,7 @@ type MotorFieldProps = {
   placeholder: string;
   keyboardType?: KeyboardTypeOptions;
   multiline?: boolean;
+  editable?: boolean;
 };
 
 function MotorField({
@@ -113,6 +133,7 @@ function MotorField({
   placeholder,
   keyboardType,
   multiline = false,
+  editable = true,
 }: MotorFieldProps) {
   return (
     <View style={styles.field}>
@@ -121,6 +142,9 @@ function MotorField({
         accessibilityLabel={label}
         style={[styles.input, multiline && styles.multilineInput]}
         value={value}
+        editable={editable}
+        autoCapitalize={keyboardType === 'url' ? 'none' : 'sentences'}
+        autoCorrect={keyboardType !== 'url'}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#94a3b8"
@@ -133,6 +157,7 @@ function MotorField({
 }
 
 const styles = StyleSheet.create({
+  saveError: { color: '#991b1b', fontSize: 14, lineHeight: 21 },
   keyboardAvoidingView: { flex: 1 },
   content: { flexGrow: 1, padding: 24, paddingTop: 32, paddingBottom: 48 },
   back: { color: '#21484a', fontSize: 16, fontWeight: '600' },

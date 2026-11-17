@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   KeyboardTypeOptions,
   Platform,
@@ -16,51 +15,68 @@ import {
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useMotorInventory } from '@/context/MotorContext';
+import { inventoryErrorMessage } from '@/services/inventory';
 
 export default function EditMotorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const motorId = Number(Array.isArray(id) ? id[0] : id);
+  const motorId = Array.isArray(id) ? id[0] : id;
   const { motors, updateMotor } = useMotorInventory();
   const motor = motors.find((item) => item.id === motorId);
+  const [originalUpdatedAt] = useState(motor?.updatedAt ?? '');
   const [name, setName] = useState(motor?.name ?? '');
   const [type, setType] = useState(motor?.type ?? '');
   const [price, setPrice] = useState(motor ? String(motor.price) : '');
   const [description, setDescription] = useState(motor?.description ?? '');
-  const [imageUrl, setImageUrl] = useState(motor?.imageUrl ?? '');
+  const [imagePath, setImagePath] = useState(motor?.imagePath ?? '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const submitting = useRef(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (submitting.current) return;
+    setSaveError(null);
     const parsedPrice = Number(price.trim());
-    if (!motor || !Number.isInteger(motorId)) {
-      Alert.alert('Motor not found', 'This motor is no longer available.');
+    if (!motor || !motorId) {
+      setSaveError('This motor is no longer available.');
       return;
     }
-    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imageUrl.trim()) {
-      Alert.alert('Missing fields', 'Please complete all motor details.');
+    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imagePath.trim()) {
+      setSaveError('Please complete all motor details.');
       return;
     }
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      Alert.alert('Invalid price', 'Enter a price greater than zero.');
+      setSaveError('Enter a price greater than zero.');
       return;
     }
 
-    updateMotor(motorId, {
-      name: name.trim(),
-      type: type.trim(),
-      price: parsedPrice,
-      description: description.trim(),
-      imageUrl: imageUrl.trim(),
-    });
-    router.replace({
-      pathname: '/(tabs)/explore/[id]',
-      params: { id: String(motorId) },
-    });
+    submitting.current = true;
+    setIsSubmitting(true);
+    setSaveError(null);
+    try {
+      await updateMotor(motorId, {
+        name: name.trim(),
+        type: type.trim(),
+        price: parsedPrice,
+        description: description.trim(),
+        imagePath: imagePath.trim(),
+      }, originalUpdatedAt);
+      router.replace({
+        pathname: '/(tabs)/explore/[id]',
+        params: { id: String(motorId) },
+      });
+    } catch (error) {
+      setSaveError(inventoryErrorMessage(error));
+    } finally {
+      submitting.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   if (!motor) {
     return (
       <MainSafe>
         <View style={styles.notFound}>
-          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/explore')} accessibilityRole="button">
             <Text style={styles.back}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.header}>Motor not found</Text>
@@ -80,15 +96,16 @@ export default function EditMotorScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
         >
-          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/explore')} accessibilityRole="button">
             <Text style={styles.back}>← Back</Text>
           </TouchableOpacity>
 
           <View style={styles.form}>
             <Text style={styles.header}>Edit motor</Text>
-            <MotorField label="Name" value={name} onChangeText={setName} placeholder="Motor name" />
-            <MotorField label="Type" value={type} onChangeText={setType} placeholder="Motor type" />
+            <MotorField editable={!isSubmitting} label="Name" value={name} onChangeText={setName} placeholder="Motor name" />
+            <MotorField editable={!isSubmitting} label="Type" value={type} onChangeText={setType} placeholder="Motor type" />
             <MotorField
+              editable={!isSubmitting}
               label="Price per day (₱)"
               value={price}
               onChangeText={setPrice}
@@ -96,6 +113,7 @@ export default function EditMotorScreen() {
               keyboardType="decimal-pad"
             />
             <MotorField
+              editable={!isSubmitting}
               label="Description"
               value={description}
               onChangeText={setDescription}
@@ -103,13 +121,15 @@ export default function EditMotorScreen() {
               multiline
             />
             <MotorField
-              label="Image URL"
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              placeholder="https://example.com/motor.jpg"
+              editable={!isSubmitting}
+              label="Image URL or storage path"
+              value={imagePath}
+              onChangeText={setImagePath}
+              placeholder="https://example.com/motor.jpg or motors/photo.jpg"
               keyboardType="url"
             />
-            <SubmitButton title="SAVE CHANGES" onPress={handleSave} />
+            {saveError && <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text>}
+            <SubmitButton title="SAVE CHANGES" onPress={handleSave} isSubmitting={isSubmitting} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -124,6 +144,7 @@ type MotorFieldProps = {
   placeholder: string;
   keyboardType?: KeyboardTypeOptions;
   multiline?: boolean;
+  editable?: boolean;
 };
 
 function MotorField({
@@ -133,6 +154,7 @@ function MotorField({
   placeholder,
   keyboardType,
   multiline = false,
+  editable = true,
 }: MotorFieldProps) {
   return (
     <View style={styles.field}>
@@ -141,6 +163,9 @@ function MotorField({
         accessibilityLabel={label}
         style={[styles.input, multiline && styles.multilineInput]}
         value={value}
+        editable={editable}
+        autoCapitalize={keyboardType === 'url' ? 'none' : 'sentences'}
+        autoCorrect={keyboardType !== 'url'}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#94a3b8"
@@ -153,6 +178,7 @@ function MotorField({
 }
 
 const styles = StyleSheet.create({
+  saveError: { color: '#991b1b', fontSize: 14, lineHeight: 21 },
   keyboardAvoidingView: { flex: 1 },
   content: { flexGrow: 1, padding: 24, paddingTop: 32, paddingBottom: 48 },
   notFound: { flex: 1, padding: 24, paddingTop: 32, gap: 24 },
