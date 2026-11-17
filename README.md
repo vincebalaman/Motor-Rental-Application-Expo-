@@ -5,6 +5,13 @@ A mobile application built with **React Native + Expo** for our **Mobile Program
 
 ## Current storage and planned roles
 
+Supabase has been selected for the shared backend. The schema and permissions are
+prepared locally; the app continues using SQLite until the development project is
+connected and tested. Follow the [Supabase setup guide](docs/supabase-setup.md).
+
+See the [multi-user implementation plan](docs/multi-user-plan.md) for proposed
+client/admin permissions, shared data, and the admin-approval booking flow.
+
 Accounts, sessions, and the motor catalog are stored locally in SQLite. Motor additions,
 edits, and deletions survive app restarts. The sample inventory is seeded once; deleting
 all motors leaves an empty catalog. Deleted motor records are retained internally for
