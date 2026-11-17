@@ -1,12 +1,18 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { MotorProvider } from '@/context/MotorContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function TabsLayout() {
+  const { user } = useAuth();
   return (
-    <Tabs
+    <MotorProvider><Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#2563eb',
+        tabBarActiveTintColor: '#21484a',
+        tabBarInactiveTintColor: '#7b8785',
+        tabBarStyle: { backgroundColor: '#faf8f2', borderTopColor: '#dddcd3' },
+        tabBarLabelStyle: { fontWeight: '700' },
       }}
     >
       <Tabs.Screen
@@ -27,6 +33,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="bookings" options={{ title: 'My Bookings', href: user?.role === 'client' ? undefined : null, tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>▤</Text> }} />
       <Tabs.Screen
         name="account"
         options={{
@@ -36,6 +43,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-    </Tabs>
+    </Tabs></MotorProvider>
   );
 }

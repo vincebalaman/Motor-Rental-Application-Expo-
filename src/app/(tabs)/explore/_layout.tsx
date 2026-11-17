@@ -4,7 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
-import { MotorProvider, useMotorInventory } from '@/context/MotorContext';
+import { useMotorInventory } from '@/context/MotorContext';
 
 function InventoryNavigator() {
   const { user } = useAuth();
@@ -35,7 +35,7 @@ function InventoryNavigator() {
 }
 
 export default function ExploreLayout() {
-  return <MotorProvider><InventoryNavigator /></MotorProvider>;
+  return <InventoryNavigator />;
 }
 
 const styles = StyleSheet.create({
