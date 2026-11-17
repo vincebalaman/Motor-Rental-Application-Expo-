@@ -173,3 +173,7 @@ they do not verify hosted email delivery, Storage API limits, or a live Supabase
 References: [React Native authentication](https://supabase.com/docs/guides/auth/quickstarts/react-native),
 [row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security),
 [password recovery](https://supabase.com/docs/guides/auth/passwords).
+
+## Password reset emails
+
+Password recovery is implemented through Supabase Auth. Configure the callback allowlist and complete the device checks in [password-recovery.md](password-recovery.md). No database migration is needed for this step.

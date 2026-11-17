@@ -115,3 +115,5 @@ git status
 | Layer | Technology |
 |-------|-----------|
 | Framework | React Native + Expo |
+
+Password reset email setup and the iPhone test checklist are documented in [docs/password-recovery.md](docs/password-recovery.md).

@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking';
 import { Link } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Input from '@/components/input';
@@ -14,7 +14,12 @@ export default function ForgotPasswordScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const [cooldown, setCooldown] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  useEffect(() => {
+    if (!cooldown) return;
+    const timer = setTimeout(() => setCooldown(value => Math.max(0, value - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
   const running = useRef(false);
   const redirectTo = process.env.EXPO_PUBLIC_RECOVERY_REDIRECT_URL?.trim() || Linking.createURL('auth/reset-password');
   const send = async () => {
@@ -22,7 +27,7 @@ export default function ForgotPasswordScreen() {
     running.current = true; setBusy(true); setError(null);
     try {
       await createPasswordRecoveryService(getRecoveryClient()).request(email, redirectTo);
-      setSent(true); setCooldown(true);
+      setSent(true); setCooldown(60);
     } catch (cause) { setError(recoveryErrorMessage(cause)); }
     finally { running.current = false; setBusy(false); }
   };
@@ -37,8 +42,8 @@ export default function ForgotPasswordScreen() {
           {sent ? (
             <View style={styles.panel}>
               <Text accessibilityRole="alert" style={styles.copy}>If an account exists for that email, a reset link will be sent. Check your inbox and spam folder, then open the newest link on this device.</Text>
-              <Text style={styles.copy}>If you need another link, wait a minute before requesting again.</Text>
-              <SubmitButton title="REQUEST ANOTHER LINK" onPress={() => { setSent(false); setCooldown(false); }} />
+              <Text style={styles.copy}>{cooldown ? `You can request another link in ${cooldown} seconds.` : 'You can request another link now.'}</Text>
+              <SubmitButton title="REQUEST ANOTHER LINK" onPress={() => { if (!cooldown) setSent(false); }} />
             </View>
           ) : <SubmitButton title="SEND RESET LINK" onPress={send} isSubmitting={busy} />}
           <Link href="/auth/login" replace style={styles.link}>Return to login</Link>

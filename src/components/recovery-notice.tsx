@@ -9,8 +9,8 @@ export default function RecoveryNotice({ title }: { title: string }) {
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.description}>
-          Password recovery and email verification are coming in a future update.
-          For now, sign in using your existing email address and password.
+          Confirm your email using the link sent when you registered, then return to login.
+          This page does not verify an account by itself.
         </Text>
         <View style={styles.actions}>
           <Link href="/auth/login" replace style={styles.link}>Return to login</Link>

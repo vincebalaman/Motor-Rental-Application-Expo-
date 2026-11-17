@@ -9,7 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/services/auth';
 
 export default function LoginScreen() {
-  const { registered } = useLocalSearchParams<{ registered?: string }>();
+  const { registered, passwordReset } = useLocalSearchParams<{ registered?: string; passwordReset?: string }>();
   const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
   const submitting = useRef(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -55,6 +55,7 @@ export default function LoginScreen() {
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Log in to your account to continue</Text>
 
+          {passwordReset && <Text style={styles.success} accessibilityRole="alert">Password updated. Log in with your new password.</Text>}
           {registered && <Text style={styles.success} accessibilityRole="alert">{registered === 'confirm' ? 'Check your email to confirm your account, then return here to log in.' : 'Your account is ready. Log in to continue.'}</Text>}
           <View style={styles.form}>
             <View style={styles.fieldGroup}>
