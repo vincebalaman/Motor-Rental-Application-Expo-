@@ -52,7 +52,6 @@ export default function LoginScreen() {
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Email Address</Text>
             <Input
-              style={styles.input}
               placeholder="Enter your email address"
               placeholderTextColor="#94a3b8"
               value={email}
@@ -125,16 +124,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#334155',
     marginLeft: 2,
-  },
-  input: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   button: {
     backgroundColor: '#3b82f6',
