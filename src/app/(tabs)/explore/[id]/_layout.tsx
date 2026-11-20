@@ -7,6 +7,9 @@ export default function MotorLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
+      <Stack.Protected guard={user?.role === 'client'} redirectTo="/explore">
+        <Stack.Screen name="book" />
+      </Stack.Protected>
       <Stack.Protected guard={user?.role === 'admin'} redirectTo="/explore">
         <Stack.Screen name="create" />
         <Stack.Screen name="edit" />

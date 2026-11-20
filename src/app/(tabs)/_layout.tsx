@@ -1,12 +1,13 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { BookingProvider } from '@/context/BookingContext';
 import { MotorProvider } from '@/context/MotorContext';
 import { useAuth } from '@/context/AuthContext';
 
 export default function TabsLayout() {
   const { user } = useAuth();
   return (
-    <MotorProvider><Tabs
+    <MotorProvider><BookingProvider key={user?.id}><Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#21484a',
@@ -43,6 +44,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-    </Tabs></MotorProvider>
+    </Tabs></BookingProvider></MotorProvider>
   );
 }

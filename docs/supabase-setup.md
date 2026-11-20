@@ -112,9 +112,9 @@ perform this operation. Do not identify an admin by a hard-coded email or signup
 - Client: `getSupabaseClient()` validates public configuration and configures PKCE,
   persisted sessions, and request deadlines. AuthContext owns token refresh and cleanup.
 
-Bookings and availability locks are intentionally not in this migration. They require
-transactional booking functions and date-conflict constraints in the next phase.
-Archive/maintenance restrictions involving bookings will be added with that schema.
+The initial accounts/catalog migration does not include bookings. Apply the separate
+client-bookings migration below to enable the booking flow. Admin screens and
+archive/maintenance restrictions involving approved bookings follow separately.
 
 ## Remaining integration work
 
@@ -124,8 +124,9 @@ Archive/maintenance restrictions involving bookings will be added with that sche
    email-to-new-password flow on an actual iPhone before removing the recovery notice.
 4. Complete the shared inventory device checklist above and verify hosted storage
    signing with an uploaded image. Local SQL policies have already been tested.
-5. Add transactional booking requests, approvals, cancellations, pickup, and return,
-   including date-conflict constraints and simultaneous-approval tests.
+5. Apply the client booking migration below and complete the booking device checks.
+6. Add the admin booking UI, pickup/return, and archive/maintenance restrictions.
+   Approval transitions already check date conflicts and have simultaneous-request tests.
 
 Local accounts do not become cloud identities simply because the same email exists.
 For the initial pilot, the proposed approach is new shared registration. Inventory
@@ -148,3 +149,52 @@ they do not verify hosted email delivery, Storage API limits, or a live Supabase
 References: [React Native authentication](https://supabase.com/docs/guides/auth/quickstarts/react-native),
 [row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security),
 [password recovery](https://supabase.com/docs/guides/auth/passwords).
+
+
+## Enable client bookings
+
+After the two existing migrations, run the entire file
+`supabase/migrations/20261120000100_client_bookings.sql` in your development project's
+SQL Editor. This creates the bookings table, policies, and guarded RPC functions.
+Do not rerun the earlier migrations. No new environment variables are needed.
+The publishable key cannot run this migration; apply it from the dashboard.
+
+One motor listing is one rentable unit. Dates are Philippine calendar dates, entered
+as YYYY-MM-DD. Return is exclusive: Nov 21 to Nov 23 costs two days. Pickup must be
+between today and 365 days ahead; rental duration must be 1–90 days. These initial
+limits are enforced by both the service and database and can be revised together.
+
+Requests are Pending until reviewed. Multiple clients can submit overlapping pending
+requests; only approved requests reserve inventory. Current maintenance or archived
+motors reject new requests. The database checks current price against the displayed
+rate, calculates total centavos, and snapshots the name/rate so later catalog edits
+do not alter booking history. Identical active requests from one client return the
+existing booking to make network retries safe. Cancelled/rejected requests may be
+requested again. On an uncertain network response, check My Bookings before retrying.
+
+Clients can read only their own bookings and cancel only their own pending requests.
+Cancellation is confirmed inline and retry-safe. No app user can write the table
+directly or choose a booking's owner, total, or status. Admins can read all bookings.
+`review_motor_booking` provides the guarded admin transition for the next UI phase;
+it serializes approvals per motor and rejects overlapping approved ranges. Adjacent
+ranges are allowed. Admin clients cannot submit rental requests themselves.
+The client UI does not collect payment or confirm a pending request as reserved.
+
+Device checks after applying the migration:
+
+1. As a client, open Explore → motor details → Request Booking.
+2. Enter valid pickup/return dates. Check day count and total; submit. Verify Pending
+   in My Bookings, close/reopen the app, and verify the request remains.
+3. Try invalid dates, past pickup, and identical dates. They must fail. Submit the same
+   active dates twice: there must be one active booking, not duplicate charges/requests.
+4. Cancel a pending request and check Cancelled after refreshing/restarting.
+5. Log in as a second client: the first client's bookings must not appear.
+6. Verify request totals preserve the original rate after an admin edits that motor.
+7. Check failed network actions and pull-to-refresh. The app must offer retry/check
+   history rather than silently reporting success.
+
+`npm test` covers booking date/money/request handling. `npm run test:backend` also
+checks database permissions, price snapshots, cancellation, overlapping/adjacent
+ranges, concurrent duplicate submissions, and simultaneous overlapping approvals in
+an isolated PostgreSQL instance. Hosted migration application and the device checks
+remain manual; the admin approval UI, pickup/return, and payment are separate work.

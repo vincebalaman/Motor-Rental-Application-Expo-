@@ -60,6 +60,11 @@ export default function MotorDetailScreen() {
               </View>
             </ProductCard>
 
+            {user?.role === 'client' && <View style={styles.confirmation}>
+              <Text style={styles.confirmationTitle}>Ready to plan your ride?</Text>
+              <Text style={styles.notFoundText}>Choose your dates and review the total. Requests require admin approval.</Text>
+              <SubmitButton title="REQUEST BOOKING" onPress={() => router.push({ pathname: '/explore/[id]/book', params: { id: motor.id } })} />
+            </View>}
             {user?.role === 'admin' && <View style={styles.actions}>
               <Pressable
                 style={styles.editButton}

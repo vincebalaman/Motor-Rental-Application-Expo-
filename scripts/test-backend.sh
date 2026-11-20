@@ -17,8 +17,10 @@ trap cleanup EXIT INT TERM
   -f supabase/tests/bootstrap.sql \
   -f supabase/migrations/20261117000100_accounts_and_inventory.sql \
   -f supabase/migrations/20261117000200_local_motor_import.sql \
+  -f supabase/migrations/20261120000100_client_bookings.sql \
   -f supabase/tests/permissions.sql \
-  -f supabase/tests/local-import.sql >"$TEST_ROOT/results.log" 2>&1 || {
+  -f supabase/tests/local-import.sql \
+  -f supabase/tests/bookings.sql >"$TEST_ROOT/results.log" 2>&1 || {
     cat "$TEST_ROOT/results.log"
     exit 1
   }
@@ -30,5 +32,24 @@ SECOND_PID=$!
 wait "$FIRST_PID"
 wait "$SECOND_PID"
 "$POSTGRES_BIN/psql" -X -h "$TEST_ROOT" -d postgres -v ON_ERROR_STOP=1 -f supabase/tests/import-concurrent-check.sql >>"$TEST_ROOT/results.log"
+# Retry identical requests concurrently, then approve overlapping clients concurrently.
+booking_sql() {
+  "$POSTGRES_BIN/psql" -X -h "$TEST_ROOT" -d postgres -v ON_ERROR_STOP=1 "$@"
+}
+booking_sql -f supabase/tests/booking-concurrent-setup.sql >>"$TEST_ROOT/results.log"
+booking_sql -v booking_actor=00000000-0000-0000-0000-000000000001 -f supabase/tests/booking-concurrent-request.sql >"$TEST_ROOT/booking-request-1.log" 2>&1 &
+FIRST_PID=$!
+booking_sql -v booking_actor=00000000-0000-0000-0000-000000000001 -f supabase/tests/booking-concurrent-request.sql >"$TEST_ROOT/booking-request-2.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
+booking_sql -v booking_actor=00000000-0000-0000-0000-000000000002 -f supabase/tests/booking-concurrent-request.sql >>"$TEST_ROOT/results.log"
+booking_sql -v booking_actor=00000000-0000-0000-0000-000000000001 -f supabase/tests/booking-concurrent-review.sql >"$TEST_ROOT/booking-review-1.log" 2>&1 &
+FIRST_PID=$!
+booking_sql -v booking_actor=00000000-0000-0000-0000-000000000002 -f supabase/tests/booking-concurrent-review.sql >"$TEST_ROOT/booking-review-2.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
+booking_sql -f supabase/tests/booking-concurrent-check.sql >>"$TEST_ROOT/results.log"
 tail -5 "$TEST_ROOT/results.log"
 echo "Local PostgreSQL test logs: $TEST_ROOT"
