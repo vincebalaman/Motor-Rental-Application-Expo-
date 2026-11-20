@@ -159,8 +159,8 @@ SQL Editor. This creates the bookings table, policies, and guarded RPC functions
 Do not rerun the earlier migrations. No new environment variables are needed.
 The publishable key cannot run this migration; apply it from the dashboard.
 
-One motor listing is one rentable unit. Dates are Philippine calendar dates, entered
-as YYYY-MM-DD. Return is exclusive: Nov 21 to Nov 23 costs two days. Pickup must be
+One motor listing is one rentable unit. Dates are Philippine calendar dates, selected
+from the booking calendar and stored as YYYY-MM-DD. Return is exclusive: Nov 21 to Nov 23 costs two days. Pickup must be
 between today and 365 days ahead; rental duration must be 1–90 days. These initial
 limits are enforced by both the service and database and can be revised together.
 
@@ -183,7 +183,7 @@ The client UI does not collect payment or confirm a pending request as reserved.
 Device checks after applying the migration:
 
 1. As a client, open Explore → motor details → Request Booking.
-2. Enter valid pickup/return dates. Check day count and total; submit. Verify Pending
+2. Pick valid pickup/return dates. Review the day count and total; confirm the request. Verify Pending
    in My Bookings, close/reopen the app, and verify the request remains.
 3. Try invalid dates, past pickup, and identical dates. They must fail. Submit the same
    active dates twice: there must be one active booking, not duplicate charges/requests.
@@ -234,3 +234,44 @@ Device checks:
 
 The admin Home screen links to booking review, inventory, and account settings.
 Dashboard counts and pickup/return tracking can be added in the next step.
+
+
+## Calendar booking UI
+
+After the client-bookings migration, apply
+`supabase/migrations/20261121000100_booking_calendar.sql` once in the SQL Editor.
+It adds `motor_blocked_dates`, an authenticated read-only RPC exposing only occupied
+calendar dates for an active motor. Client identities, booking IDs, pricing, and
+pending/rejected/cancelled requests are not exposed by this endpoint. The bounded
+455-day horizon covers the 365-day pickup horizon plus a 90-day rental and fits
+within the default API row limit. Existing bookings policies remain unchanged.
+
+The booking screen now uses a month calendar: tap pickup, then return. The range is
+highlighted and the day count/total update automatically. Past dates and occupied
+pickup days are disabled. The return date is exclusive, so returning on the first
+occupied day is allowed, while crossing that day is blocked. Clear Dates resets
+the range; tapping a date after completing a range starts a new pickup selection.
+The review step shows the motor photo, dates, daily rate, total, and approval notice
+before sending a request. The displayed rate is held for review and compared with
+both the latest local catalog and the server rate before submission.
+
+Availability reloads on screen focus, foreground, explicit retry, and failed submit.
+An unavailable calendar never implies that all dates are free: review/confirmation
+are disabled until availability is loaded. The server still checks availability on
+request and approval. This calendar does not reserve dates or collect payment.
+
+Device checks on Android and iPhone:
+
+- Navigate across months, select pickup and return, clear the range, and start again.
+- Check a month boundary, same-day taps, and the 90-day/365-day limits.
+- Confirm that dates occupied by an approved booking are unavailable. Pending requests
+  must not block dates. Return on the next approved booking's pickup date is allowed.
+- Review dates/rate/total, go back to edit, then submit; check the saved request in
+  My Bookings. A failed network call must never display a false success.
+- Change the motor rate or approve an overlapping request on a second device while
+  reviewing; confirmation must fail safely, refresh, and offer another selection.
+- Check screen-reader date labels, larger text, narrow screens, and loading/retry states.
+
+No additional native dependency or rebuild is required for the calendar itself.
+Automated tests cover month alignment/leap days, selection state, range conflicts,
+boundaries, RPC errors, availability privacy, and SQL permissions.

@@ -59,6 +59,14 @@ export function bookingErrorMessage(error: unknown): string {
 }
 export function createBookingService(client: SupabaseClient) {
   return {
+    async blockedDates(motorId: string): Promise<string[]> {
+      const { data, error } = await client.rpc('motor_blocked_dates', { p_motor_id: motorId });
+      if (error) throw error;
+      if (!Array.isArray(data) || data.some(row => typeof row.blocked_date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(row.blocked_date))) {
+        throw new BookingError('Availability could not be confirmed. Refresh the calendar.');
+      }
+      return data.map(row => row.blocked_date);
+    },
     async listAdmin(status: BookingStatus | null, offset = 0): Promise<{ bookings: AdminBooking[]; hasMore: boolean }> {
       let query = client.from('bookings').select('*').order('created_at', { ascending: false }).order('id', { ascending: false });
       if (status) query = query.eq('status', status);
