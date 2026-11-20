@@ -1,5 +1,5 @@
-import { forwardRef, type ComponentRef } from 'react';
-import { StyleSheet, Text, TextInput, type TextInputProps, type StyleProp, type ViewStyle, TouchableOpacity, View } from 'react-native';
+import { type ComponentPropsWithRef, type ComponentRef, useImperativeHandle, useRef } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, type TextInputProps, type StyleProp, type ViewStyle, TouchableOpacity } from 'react-native';
 
 type InputProps = TextInputProps & {
   containerStyle?: StyleProp<ViewStyle>;
@@ -8,15 +8,19 @@ type InputProps = TextInputProps & {
   togglePasswordVisibility?: () => void;
 };
 
-const Input = forwardRef<ComponentRef<typeof TextInput>, InputProps>(function Input(
-  { type, isHidden = true, togglePasswordVisibility, containerStyle, style, secureTextEntry, ...props },
-  ref,
-) {
+export default function Input({ ref, type, isHidden = true, togglePasswordVisibility, containerStyle, style, secureTextEntry, ...props }: InputProps) {
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  useImperativeHandle(ref, () => inputRef.current!, []);
   return (
-    <View style={[styles.container, containerStyle]}>
+    <Pressable
+      accessible={false}
+      style={[styles.container, containerStyle]}
+      onPress={() => { if (props.editable !== false) inputRef.current?.focus(); }}
+    >
       <TextInput
         ref={ref}
         {...props}
+        ref={inputRef}
         accessibilityLabel={props.accessibilityLabel ?? props.placeholder}
         underlineColorAndroid="transparent"
         style={[styles.input, style]}
@@ -33,7 +37,7 @@ const Input = forwardRef<ComponentRef<typeof TextInput>, InputProps>(function In
           <Text>{isHidden ? 'Show' : 'Hide'}</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </Pressable>
   );
 });
 
@@ -41,6 +45,7 @@ export default Input;
 
 const styles = StyleSheet.create({
   container: {
+    minHeight: 54,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -50,6 +55,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minWidth: 0,
+    minHeight: 52,
+    textAlignVertical: 'center',
     borderRadius: 4,
     paddingVertical: 14,
     fontSize: 15,
