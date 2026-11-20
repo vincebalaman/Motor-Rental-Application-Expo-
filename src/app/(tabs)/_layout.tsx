@@ -2,7 +2,6 @@ import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
 import { BookingProvider } from '@/context/BookingContext';
 import { MotorProvider } from '@/context/MotorContext';
-import { BookingProvider } from '@/context/BookingContext';
 import { useAuth } from '@/context/AuthContext';
 
 export default function TabsLayout() {

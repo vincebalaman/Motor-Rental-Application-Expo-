@@ -4,12 +4,10 @@ import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } fr
 import CatalogCard from '@/components/catalog-card';
 import MainSafe from '@/components/mainsafe';
 import { useAuth } from '@/context/AuthContext';
-import { useBookingCart } from '@/context/BookingContext';
 import { useMotorInventory } from '@/context/MotorContext';
 
 export default function ExploreScreen() {
   const { motors, refreshing, refreshError, refresh } = useMotorInventory();
-  const { selectedMotors, addMotor, removeMotor, hasMotor } = useBookingCart();
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
   const { user } = useAuth();
   const [query, setQuery] = useState('');
@@ -29,7 +27,7 @@ export default function ExploreScreen() {
           {[null, ...types].map(value => <Pressable key={value ?? '__all'} accessibilityRole="button" accessibilityState={{ selected: selectedType === value }} onPress={() => setType(value)} style={[styles.chip, selectedType === value && styles.selected]}><Text style={[styles.chipText, selectedType === value && styles.selectedText]}>{value ?? 'All motors'}</Text></Pressable>)}
         </ScrollView>
         <Text style={styles.count}>{filtered.length} {filtered.length === 1 ? 'motor' : 'motors'}{search || selectedType ? ' found' : ' to explore'}</Text>
-        {user?.role === 'client' && <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.bookingLink}><Text style={styles.bookingLinkText}>View booking ({selectedMotors.length}) →</Text></Pressable>}
+        {user?.role === 'client' && <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.bookingLink}><Text style={styles.bookingLinkText}>My Bookings →</Text></Pressable>}
         {refreshError && <Text accessibilityRole="alert" style={styles.copy}>{refreshError}</Text>}
         {user?.role === 'admin' && <View style={styles.admin}><Pressable accessibilityRole="button" onPress={() => router.push('/explore/import')} style={styles.adminButton}><Text style={styles.chipText}>Import local motors</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/explore/[id]/create', params: { id: 'new' } })} style={styles.adminButton}><Text style={styles.chipText}>+ Add motor</Text></Pressable></View>}
       </View>}
@@ -37,12 +35,11 @@ export default function ExploreScreen() {
         <CatalogCard motor={item} />
         {user?.role === 'client' && <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${hasMotor(item.id) ? 'Remove' : 'Add'} ${item.name} ${hasMotor(item.id) ? 'from' : 'to'} booking`}
-          accessibilityState={{ selected: hasMotor(item.id) }}
-          onPress={() => hasMotor(item.id) ? removeMotor(item.id) : addMotor(item)}
-          style={[styles.addButton, hasMotor(item.id) && styles.addedButton]}
+          accessibilityLabel={`Request booking for ${item.name}`}
+          onPress={() => router.push({ pathname: '/explore/[id]/book', params: { id: item.id } })}
+          style={styles.addButton}
         >
-          <Text style={[styles.addButtonText, hasMotor(item.id) && styles.addedButtonText]}>{hasMotor(item.id) ? '✓ Added to booking' : '＋ Add to booking'}</Text>
+          <Text style={styles.addButtonText}>Request booking →</Text>
         </Pressable>}
       </View>}
       ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyTitle}>{motors.length ? 'No matching rides' : 'More rides on the way'}</Text><Text style={styles.copy}>{motors.length ? 'Try another name or choose a different type.' : 'There are no motors listed yet. Pull down to check again.'}</Text>{!!(search || selectedType) && <Pressable accessibilityRole="button" style={styles.adminButton} onPress={() => { setQuery(''); setType(null); }}><Text style={styles.chipText}>Clear search and filters</Text></Pressable>}</View>}
