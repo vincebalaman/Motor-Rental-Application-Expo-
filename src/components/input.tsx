@@ -1,18 +1,21 @@
-import type { ComponentPropsWithRef } from 'react';
+import { forwardRef, type ComponentRef } from 'react';
 import { StyleSheet, Text, TextInput, type TextInputProps, type StyleProp, type ViewStyle, TouchableOpacity, View } from 'react-native';
 
 type InputProps = TextInputProps & {
-  ref?: ComponentPropsWithRef<typeof TextInput>['ref'];
   containerStyle?: StyleProp<ViewStyle>;
   type?: 'password';
   isHidden?: boolean;
   togglePasswordVisibility?: () => void;
 };
 
-export default function Input({ type, isHidden = true, togglePasswordVisibility, containerStyle, style, secureTextEntry, ...props }: InputProps) {
+const Input = forwardRef<ComponentRef<typeof TextInput>, InputProps>(function Input(
+  { type, isHidden = true, togglePasswordVisibility, containerStyle, style, secureTextEntry, ...props },
+  ref,
+) {
   return (
     <View style={[styles.container, containerStyle]}>
       <TextInput
+        ref={ref}
         {...props}
         accessibilityLabel={props.accessibilityLabel ?? props.placeholder}
         underlineColorAndroid="transparent"
@@ -32,7 +35,9 @@ export default function Input({ type, isHidden = true, togglePasswordVisibility,
       )}
     </View>
   );
-}
+});
+
+export default Input;
 
 const styles = StyleSheet.create({
   container: {
