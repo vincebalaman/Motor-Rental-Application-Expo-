@@ -17,7 +17,7 @@ function fixture({ role = 'client', identityId = 'user-1', profileError = null, 
         eq(column, value) { calls.push([table, column, value]); return this; },
         async single() {
           return table === 'profiles'
-            ? { data: { full_name: 'Test Rider' }, error: profileError }
+            ? { data: { full_name: 'Test Rider', phone: '+639171234567' }, error: profileError }
             : { data: role === null ? null : { role }, error: roleError };
         },
       };
@@ -44,7 +44,7 @@ test('signup sends name metadata and reports email confirmation without assignin
 
 test('identity is validated and role comes from the protected role table, never signup metadata', async () => {
   const { service, calls } = fixture();
-  assert.deepEqual(await service.loadUser(session), { id: 'user-1', email: 'rider@example.com', fullName: 'Test Rider', role: 'client' });
+  assert.deepEqual(await service.loadUser(session), { id: 'user-1', email: 'rider@example.com', fullName: 'Test Rider', phone: '+639171234567', role: 'client' });
   assert.deepEqual(calls, [['profiles', 'id', 'user-1'], ['user_roles', 'user_id', 'user-1']]);
   assert.equal((await fixture({ role: 'admin' }).service.loadUser(session)).role, 'admin');
 });

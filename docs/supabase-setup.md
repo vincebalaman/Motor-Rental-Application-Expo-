@@ -319,3 +319,24 @@ and errors do not imply that the client has no bookings. Admin Home is unaffecte
 No new migration is needed. Test approval priority, nearest approved dates, latest
 eligible pending fallback, cancellation/approval on another device, no upcoming
 requests, and the exclusive return-day boundary.
+
+## Profile editing
+
+Account → Edit Profile updates `profiles.full_name` and `profiles.phone`. Name is
+required (2–120 characters); phone is optional and accepts 7–15 digits with an
+optional leading plus. Spaces, parentheses, dots, and hyphens are removed before
+saving; leading zeros are retained. A blank phone stores NULL. The form does not
+verify phone ownership. Email and role are not part of the editable payload.
+
+The service validates the current Auth identity, scopes the update to that user's
+profile ID, and requires a returned row before displaying success. Existing column
+grants and RLS prevent editing another profile, account identity, or role. A confirmed
+save updates AuthContext immediately; older in-flight profile hydration cannot replace
+that newly saved name/phone. Draft values remain available on failed/uncertain saves.
+The app keeps password/session work out of the profile-editing flow.
+
+No migration or native dependency is needed. Device checks: change name and phone,
+verify Home's name, reopen the app to verify persistence, remove the optional phone,
+try invalid values, cancel editing, and retry after a failed connection. On an admin
+account/device, refresh booking details and verify that the client's updated name and
+phone appear. Backend tests exercise own-profile writes and admin read visibility.

@@ -2,6 +2,7 @@ import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
+import { createProfileService, ProfileError } from '@/services/profile';
 import { getSupabaseClient } from '@/lib/supabase';
 import { createAuthService, withAuthTimeout, type AuthUser } from '@/services/auth';
 
@@ -12,10 +13,12 @@ type AuthContextType = {
   retrySession: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (fullName: string, phone: string) => Promise<void>;
 };
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const profileRevision = useRef(0);
   const currentUserId = useRef<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,8 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const timer = setTimeout(() => {
         timers.delete(timer);
         if (!active || current !== revision) return;
+        const profileVersion = profileRevision.current;
         void service.loadUser(session).then(restoredUser => {
-          if (active && current === revision) { currentUserId.current = restoredUser.id; setUser(restoredUser); setSessionError(null); }
+          if (active && current === revision) { currentUserId.current = restoredUser.id; setUser(previous => previous?.id === restoredUser.id && profileVersion !== profileRevision.current ? { ...restoredUser, fullName: previous.fullName, phone: previous.phone } : restoredUser); setSessionError(null); }
         }).catch(() => {
           if (active && current === revision) {
             setUser(null);
@@ -88,12 +92,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { await createAuthService(getSupabaseClient()).signIn(email, password); }
     catch (error) { setLoading(false); throw error; }
   };
+  const updateProfile = async (fullName: string, phone: string) => {
+    if (!user) throw new ProfileError('Log in before editing your profile.');
+    const id = user.id;
+    const saved = await withAuthTimeout(createProfileService(getSupabaseClient()).update(id, fullName, phone));
+    if (currentUserId.current !== id) throw new ProfileError('Your session changed. Log in again to check your profile.');
+    profileRevision.current++;
+    setUser(previous => previous?.id === id ? { ...previous, fullName: saved.full_name, phone: saved.phone } : previous);
+  };
   const logout = async () => {
     const { error } = await withAuthTimeout(getSupabaseClient().auth.signOut({ scope: 'local' }));
     if (error) throw error;
     setUser(null); setSessionError(null); setLoading(false);
   };
-  return <AuthContext.Provider value={{ user, loading, sessionError, retrySession, signIn, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, sessionError, retrySession, signIn, logout, updateProfile }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
