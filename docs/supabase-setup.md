@@ -303,3 +303,19 @@ Android/iPhone, cancellation and its History placement, a stale request already
 approved by an admin, direct detail links after restarting, missing/other-account IDs,
 failed refresh/retry, and archived listings. Check the return-day boundary in
 Philippine time and confirm Past is not shown as Completed.
+
+## Client Home booking card
+
+Home prioritizes the nearest approved booking with a return date still ahead in
+Philippine time, including approved rental dates already underway. If none exists,
+it shows the most recently created pending request whose pickup date has not passed.
+Rejected, cancelled, elapsed pending, and past approved records do not become the
+next ride. An account with neither eligible status sees Browse Motors.
+
+The card uses the saved motor name/dates/total and links directly to booking details.
+Pending copy explicitly says that the motor is not reserved. Home refreshes bookings
+on focus and pull-to-refresh; BookingProvider also refreshes on foreground. Loading
+and errors do not imply that the client has no bookings. Admin Home is unaffected.
+No new migration is needed. Test approval priority, nearest approved dates, latest
+eligible pending fallback, cancellation/approval on another device, no upcoming
+requests, and the exclusive return-day boundary.

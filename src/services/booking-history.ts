@@ -16,3 +16,11 @@ export function bookingsInSection(bookings: Booking[], section: BookingSection, 
     ? a.pickup_date.localeCompare(b.pickup_date) || b.created_at.localeCompare(a.created_at)
     : b.updated_at.localeCompare(a.updated_at) || b.created_at.localeCompare(a.created_at));
 }
+export function homeBooking(bookings: Booking[], today: string): Booking | null {
+  const upcoming = bookingsInSection(bookings, 'upcoming', today);
+  // Scheduled dates already underway remain visible until the exclusive return day.
+  const approved = upcoming.find(booking => booking.status === 'approved');
+  if (approved) return approved;
+  return upcoming.filter(booking => booking.status === 'pending')
+    .sort((a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id))[0] ?? null;
+}

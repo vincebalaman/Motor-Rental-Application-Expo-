@@ -43,3 +43,26 @@ test('failed detail read is not presented as an absent booking', async () => {
   const query = { select: () => query, eq: () => query, maybeSingle: async () => ({ data: null, error: new Error('network') }) };
   await assert.rejects(createBookingService({ from: () => query }).get('owner','id'));
 });
+
+test('Home prioritizes nearest approved ride over newer pending request', async () => {
+  const { homeBooking } = await import('../src/services/booking-history.ts');
+  const rows = [booking({ id: 'pending', created_at: '2026-11-21T12:00:00Z' }), booking({ id: 'later', status: 'approved', pickup_date: '2026-11-25', return_date: '2026-11-27' }), booking({ id: 'next', status: 'approved' })];
+  assert.equal(homeBooking(rows, today).id, 'next');
+});
+test('Home keeps approved dates underway until the return day', async () => {
+  const { homeBooking } = await import('../src/services/booking-history.ts');
+  const active = booking({ id: 'active', status: 'approved', pickup_date: '2026-11-20' });
+  assert.equal(homeBooking([booking({ id: 'future', status: 'approved' }), active], today).id, 'active');
+  assert.equal(homeBooking([{ ...active, return_date: today }], today), null);
+});
+test('Home fallback chooses latest eligible pending request independently of list order', async () => {
+  const { homeBooking } = await import('../src/services/booking-history.ts');
+  const rows = [booking({ id: 'old' }), booking({ id: 'latest', pickup_date: '2026-11-26', created_at: '2026-11-21T12:00:00Z' }), booking({ id: 'expired', pickup_date: '2026-11-20', created_at: '2026-11-21T13:00:00Z' })];
+  assert.equal(homeBooking(rows, today).id, 'latest');
+});
+test('Home excludes cancelled, rejected, elapsed requests and handles an empty account', async () => {
+  const { homeBooking } = await import('../src/services/booking-history.ts');
+  const rows = [booking({ status: 'rejected' }), booking({ status: 'cancelled' }), booking({ status: 'approved', return_date: today }), booking({ pickup_date: '2026-11-20' })];
+  assert.equal(homeBooking(rows, today), null);
+  assert.equal(homeBooking([], today), null);
+});
