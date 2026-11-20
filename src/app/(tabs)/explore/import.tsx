@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { requireOptionalNativeModule } from 'expo';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -30,12 +29,6 @@ export default function LocalMotorImportScreen() {
   const load = useCallback(async () => {
     let database: SQLiteDatabase | undefined;
     try {
-      // Router evaluates route modules even before this screen is opened. Keep
-      // legacy SQLite out of that path so cloud features work without the module.
-      if (Platform.OS !== 'web' && !requireOptionalNativeModule('ExpoSQLite')) {
-        if (mounted.current) setError('Local import is unavailable in this app build because SQLite is not included. Use the original phone with SQLite support to import old motors, or rebuild your development app with expo-sqlite. Your shared Supabase motors and bookings remain available.');
-        return;
-      }
       const { openDatabaseAsync } = await import('expo-sqlite');
       database = await openDatabaseAsync('motor-rental.db', { useNewConnection: true });
       const local = await readLocalImport(database);
