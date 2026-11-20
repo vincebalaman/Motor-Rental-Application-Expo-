@@ -1,5 +1,5 @@
-import type { ComponentPropsWithRef } from 'react';
-import { StyleSheet, Text, TextInput, type TextInputProps, type StyleProp, type ViewStyle, TouchableOpacity, View } from 'react-native';
+import { type ComponentPropsWithRef, type ComponentRef, useImperativeHandle, useRef } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, type TextInputProps, type StyleProp, type ViewStyle, TouchableOpacity } from 'react-native';
 
 type InputProps = TextInputProps & {
   ref?: ComponentPropsWithRef<typeof TextInput>['ref'];
@@ -9,11 +9,18 @@ type InputProps = TextInputProps & {
   togglePasswordVisibility?: () => void;
 };
 
-export default function Input({ type, isHidden = true, togglePasswordVisibility, containerStyle, style, secureTextEntry, ...props }: InputProps) {
+export default function Input({ ref, type, isHidden = true, togglePasswordVisibility, containerStyle, style, secureTextEntry, ...props }: InputProps) {
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  useImperativeHandle(ref, () => inputRef.current!, []);
   return (
-    <View style={[styles.container, containerStyle]}>
+    <Pressable
+      accessible={false}
+      style={[styles.container, containerStyle]}
+      onPress={() => { if (props.editable !== false) inputRef.current?.focus(); }}
+    >
       <TextInput
         {...props}
+        ref={inputRef}
         accessibilityLabel={props.accessibilityLabel ?? props.placeholder}
         underlineColorAndroid="transparent"
         style={[styles.input, style]}
@@ -30,12 +37,13 @@ export default function Input({ type, isHidden = true, togglePasswordVisibility,
           <Text>{isHidden ? 'Show' : 'Hide'}</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    minHeight: 54,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -45,6 +53,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minWidth: 0,
+    minHeight: 52,
+    textAlignVertical: 'center',
     borderRadius: 4,
     paddingVertical: 14,
     fontSize: 15,
