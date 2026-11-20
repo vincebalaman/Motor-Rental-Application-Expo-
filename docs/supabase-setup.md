@@ -125,7 +125,7 @@ archive/maintenance restrictions involving approved bookings follow separately.
 4. Complete the shared inventory device checklist above and verify hosted storage
    signing with an uploaded image. Local SQL policies have already been tested.
 5. Apply the client booking migration below and complete the booking device checks.
-6. Add the admin booking UI, pickup/return, and archive/maintenance restrictions.
+6. Complete the admin booking device checks below; add pickup/return and archive/maintenance restrictions.
    Approval transitions already check date conflicts and have simultaneous-request tests.
 
 Local accounts do not become cloud identities simply because the same email exists.
@@ -175,7 +175,7 @@ requested again. On an uncertain network response, check My Bookings before retr
 Clients can read only their own bookings and cancel only their own pending requests.
 Cancellation is confirmed inline and retry-safe. No app user can write the table
 directly or choose a booking's owner, total, or status. Admins can read all bookings.
-`review_motor_booking` provides the guarded admin transition for the next UI phase;
+`review_motor_booking` provides the guarded transition used by the admin Bookings tab;
 it serializes approvals per motor and rejects overlapping approved ranges. Adjacent
 ranges are allowed. Admin clients cannot submit rental requests themselves.
 The client UI does not collect payment or confirm a pending request as reserved.
@@ -197,4 +197,40 @@ Device checks after applying the migration:
 checks database permissions, price snapshots, cancellation, overlapping/adjacent
 ranges, concurrent duplicate submissions, and simultaneous overlapping approvals in
 an isolated PostgreSQL instance. Hosted migration application and the device checks
-remain manual; the admin approval UI, pickup/return, and payment are separate work.
+remain manual; pickup/return and payment are separate work.
+
+
+## Admin booking management
+
+No new migration is required if `20261120000100_client_bookings.sql` is already
+applied. Log in with an admin account and open Bookings or Home → Manage Bookings.
+Clients do not see this tab and direct navigation redirects them to Home. Database
+RLS and the review RPC remain authoritative for access and decisions.
+
+The list defaults to Pending and can filter Approved, Rejected, Cancelled, or All.
+Rows show the client name/phone from protected profiles, account ID, motor snapshot,
+dates, daily rate, total, and reference. Email is not read from Auth administrative
+APIs and no service key is shipped. Missing phone information is clearly labelled.
+Results load in pages of 50 with Load More; pulling down refreshes the first page.
+Foreground/focus refreshes pick up changes from clients and other admins.
+
+Approve and Reject require inline confirmation. Expired pickups cannot be approved;
+rejection still works. Failed actions refresh the server state and do not announce
+success. Changing a reviewed decision is not supported in this version. Client
+cancellation and concurrent admin decisions are reconciled by the existing RPC.
+
+Device checks:
+
+1. Open a pending request as admin. Verify the client, dates, and snapshotted total.
+2. Confirm approval; the request should appear in Approved and disappear from Pending.
+3. Reject another pending request and verify it appears in Rejected.
+4. Try two overlapping pending requests: approval of one must block approval of the
+   other. Rejection of the competing request should still work.
+5. From another admin/device, review or cancel a request while the first screen is
+   open. The stale action must fail safely and refresh its status.
+6. Log in as a client and verify the admin tab is absent; the client's own booking
+   status should reflect the admin decision after refresh.
+7. Check an empty queue, a failed load, a retry, and more than 50 requests if available.
+
+The admin Home screen links to booking review, inventory, and account settings.
+Dashboard counts and pickup/return tracking can be added in the next step.

@@ -60,5 +60,17 @@ set local role authenticated;
 select pg_temp.fails($q$select public.request_motor_booking('10000000-0000-0000-0000-000000000001',current_date+10,current_date+12,20000)$q$,'booking_motor_unavailable');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',true);
 select pg_temp.fails($q$select public.request_motor_booking('10000000-0000-0000-0000-000000000001',current_date+10,current_date+12,20000)$q$,'booking_client_required');
+select pg_temp.fails('update public.bookings set status = ''approved''','permission denied');
+select id as reject_id from public.bookings where motor_id='10000000-0000-0000-0000-000000000001' and status='pending' \gset
+select public.review_motor_booking(:'reject_id',false);
+select pg_temp.check_ok((select status='rejected' from public.bookings where id=:'reject_id'),'admin rejection persists');
+select pg_temp.fails(format('select public.review_motor_booking(%L,true)', :'reject_id'),'booking_not_pending');
+reset role;
+update public.motors set operating_status='available' where id='10000000-0000-0000-0000-000000000001';
+insert into public.bookings(id,client_id,motor_id,motor_name,pickup_date,return_date,daily_rate_centavos)
+values ('20000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','Old request',current_date-2,current_date-1,12345);
+set local role authenticated;
+select pg_temp.fails($q$select public.review_motor_booking('20000000-0000-0000-0000-000000000001',true)$q$,'booking_invalid_dates');
+select public.review_motor_booking('20000000-0000-0000-0000-000000000001',false);
 reset role;
 rollback;

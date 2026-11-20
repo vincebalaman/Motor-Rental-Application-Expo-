@@ -34,6 +34,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="admin-bookings" options={{ title: 'Bookings', href: user?.role === 'admin' ? undefined : null, tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>▤</Text> }} />
       <Tabs.Screen name="bookings" options={{ title: 'My Bookings', href: user?.role === 'client' ? undefined : null, tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>▤</Text> }} />
       <Tabs.Screen
         name="account"
