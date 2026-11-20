@@ -71,5 +71,6 @@ test('invalid local data never triggers a remote write', async () => {
 test('missing migration and permission failures give actionable import messages', () => {
   assert.match(importErrorMessage({ code: 'PGRST202' }), /migration/);
   assert.match(importErrorMessage({ code: '42501' }), /Admin role/);
+  assert.match(importErrorMessage(new Error("Cannot find native module 'ExpoSQLite'")), /Rebuild and reinstall/);
   assert.equal(importErrorMessage(new Error('private diagnostic')).includes('private'),false);
 });

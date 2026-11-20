@@ -10,6 +10,9 @@ export function localMotorPayload(motor: LocalMotor) {
 
 export function importErrorMessage(error: unknown): string {
   if (error instanceof InventoryError) return error.message;
+  if (error instanceof Error && error.message.includes("Cannot find native module 'ExpoSQLite'")) {
+    return 'This Android app build does not include expo-sqlite. Rebuild and reinstall the app from the current project configuration, then reload this screen.';
+  }
   const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
   if (['PGRST205', 'PGRST202', '42P01', '42883'].includes(String(code))) {
     return 'Apply the local-motor-import SQL migration in Supabase first, then reload this preview.';

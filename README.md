@@ -17,7 +17,10 @@ existing local data remains on the device and is not imported automatically.
 The shared catalog starts empty. Assign an admin account using the setup guide, then
 add the first listing or use the admin-only import preview on the original phone.
 The import requires the second SQL migration described in the setup guide and preserves
-local motor records. Bookings and email password recovery are the next phases.
+local motor records. If the import screen reports that the Android build does not
+include `expo-sqlite`, run `npx expo run:android` or create and install a new EAS
+development build so the native module is included.
+Bookings and email password recovery are the next phases.
 
 See the [multi-user implementation plan](docs/multi-user-plan.md) for the agreed
 client/admin permissions, shared data, and admin-approval booking flow.

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { openDatabaseAsync } from 'expo-sqlite';
+import type { SQLiteDatabase } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -27,8 +27,9 @@ export default function LocalMotorImportScreen() {
   const stop = useRef(false);
 
   const load = useCallback(async () => {
-    let database: Awaited<ReturnType<typeof openDatabaseAsync>> | undefined;
+    let database: SQLiteDatabase | undefined;
     try {
+      const { openDatabaseAsync } = await import('expo-sqlite');
       database = await openDatabaseAsync('motor-rental.db', { useNewConnection: true });
       const local = await readLocalImport(database);
       const existing = local.sourceId && local.motors.length ? await service.mappings(local.sourceId) : new Map<number, string>();
