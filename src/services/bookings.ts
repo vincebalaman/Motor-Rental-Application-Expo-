@@ -59,6 +59,11 @@ export function bookingErrorMessage(error: unknown): string {
 }
 export function createBookingService(client: SupabaseClient) {
   return {
+    async get(clientId: string, bookingId: string): Promise<Booking | null> {
+      const { data, error } = await client.from('bookings').select('*').eq('client_id', clientId).eq('id', bookingId).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
     async blockedDates(motorId: string): Promise<string[]> {
       const { data, error } = await client.rpc('motor_blocked_dates', { p_motor_id: motorId });
       if (error) throw error;

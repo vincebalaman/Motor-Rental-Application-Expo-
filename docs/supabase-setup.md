@@ -275,3 +275,31 @@ Device checks on Android and iPhone:
 No additional native dependency or rebuild is required for the calendar itself.
 Automated tests cover month alignment/leap days, selection state, range conflicts,
 boundaries, RPC errors, availability privacy, and SQL permissions.
+
+
+## Client booking history and details
+
+My Bookings now has Upcoming and History views. Pending requests are Upcoming when
+pickup is today or later in Philippine time; approved requests remain Upcoming while
+the exclusive return date is still ahead, including scheduled dates already underway.
+Rejected/cancelled requests, elapsed pending pickups, and elapsed approved bookings
+appear in History. Past labels preserve the real decision (for example Past · Approved)
+and never assert that a motor was picked up, returned, or completed.
+
+Open a card to view `/bookings/[bookingId]`: saved motor name, dates, duration,
+snapshotted daily rate/total, status, reference, and timestamps. Photos come from the
+current accessible motor catalog and have a fallback when the listing is archived.
+The details read scopes both client identity and booking ID and remains protected by
+bookings RLS. A failed read shows retry rather than claiming the booking is absent.
+
+Cancellation has moved into the details screen. Only pending requests can be
+cancelled, with confirmation; cancellation is disabled while the record is being
+refreshed or could not be verified. The server-confirmed result updates both the
+record and shared booking list. A concurrent approval or uncertain response refreshes
+the details and reports the safe next step. Cancelled requests appear in History.
+
+No new migration or native dependency is required. Test both views and details on
+Android/iPhone, cancellation and its History placement, a stale request already
+approved by an admin, direct detail links after restarting, missing/other-account IDs,
+failed refresh/retry, and archived listings. Check the return-day boundary in
+Philippine time and confirm Past is not shown as Completed.
