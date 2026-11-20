@@ -2,7 +2,6 @@ import { type ComponentPropsWithRef, type ComponentRef, useImperativeHandle, use
 import { Pressable, StyleSheet, Text, TextInput, type TextInputProps, type StyleProp, type ViewStyle, TouchableOpacity } from 'react-native';
 
 type InputProps = TextInputProps & {
-  ref?: ComponentPropsWithRef<typeof TextInput>['ref'];
   containerStyle?: StyleProp<ViewStyle>;
   type?: 'password';
   isHidden?: boolean;
@@ -19,6 +18,7 @@ export default function Input({ ref, type, isHidden = true, togglePasswordVisibi
       onPress={() => { if (props.editable !== false) inputRef.current?.focus(); }}
     >
       <TextInput
+        ref={ref}
         {...props}
         ref={inputRef}
         accessibilityLabel={props.accessibilityLabel ?? props.placeholder}
@@ -39,7 +39,9 @@ export default function Input({ ref, type, isHidden = true, togglePasswordVisibi
       )}
     </Pressable>
   );
-}
+});
+
+export default Input;
 
 const styles = StyleSheet.create({
   container: {

@@ -6,6 +6,7 @@ import MainSafe from '@/components/mainsafe';
 import ProductCard from '@/components/productcard';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
+import { useBookingCart } from '@/context/BookingContext';
 import { useMotorInventory } from '@/context/MotorContext';
 import { inventoryErrorMessage } from '@/services/inventory';
 
@@ -13,6 +14,7 @@ export default function MotorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { motors, deleteMotor } = useMotorInventory();
+  const { addMotor, removeMotor, hasMotor } = useBookingCart();
   const motor = motors.find((m) => m.id === (Array.isArray(id) ? id[0] : id));
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -132,6 +134,13 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: '#334155', marginVertical: 18 },
   description: { color: '#cbd5e1', fontSize: 16, lineHeight: 25 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  bookingActions: { gap: 10 },
+  bookingButton: { minHeight: 52, alignItems: 'center', justifyContent: 'center', backgroundColor: '#21484a', borderRadius: 12, paddingHorizontal: 16 },
+  bookingButtonText: { color: '#faf8f2', fontSize: 15, fontWeight: '800' },
+  bookingButtonSelected: { backgroundColor: '#e2e9df' },
+  bookingButtonSelectedText: { color: '#21484a' },
+  viewBookingButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  viewBookingText: { color: '#21484a', fontSize: 14, fontWeight: '700' },
   editButton: { flex: 1, alignItems: 'center', backgroundColor: '#21484a', borderRadius: 12, paddingVertical: 15 },
   editButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
   deleteButton: { flex: 1, alignItems: 'center', backgroundColor: '#7f1d1d', borderRadius: 12, paddingVertical: 15 },

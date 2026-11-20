@@ -4,10 +4,12 @@ import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } fr
 import CatalogCard from '@/components/catalog-card';
 import MainSafe from '@/components/mainsafe';
 import { useAuth } from '@/context/AuthContext';
+import { useBookingCart } from '@/context/BookingContext';
 import { useMotorInventory } from '@/context/MotorContext';
 
 export default function ExploreScreen() {
   const { motors, refreshing, refreshError, refresh } = useMotorInventory();
+  const { selectedMotors, addMotor, removeMotor, hasMotor } = useBookingCart();
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
   const { user } = useAuth();
   const [query, setQuery] = useState('');
@@ -27,16 +29,28 @@ export default function ExploreScreen() {
           {[null, ...types].map(value => <Pressable key={value ?? '__all'} accessibilityRole="button" accessibilityState={{ selected: selectedType === value }} onPress={() => setType(value)} style={[styles.chip, selectedType === value && styles.selected]}><Text style={[styles.chipText, selectedType === value && styles.selectedText]}>{value ?? 'All motors'}</Text></Pressable>)}
         </ScrollView>
         <Text style={styles.count}>{filtered.length} {filtered.length === 1 ? 'motor' : 'motors'}{search || selectedType ? ' found' : ' to explore'}</Text>
+        {user?.role === 'client' && <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.bookingLink}><Text style={styles.bookingLinkText}>View booking ({selectedMotors.length}) →</Text></Pressable>}
         {refreshError && <Text accessibilityRole="alert" style={styles.copy}>{refreshError}</Text>}
         {user?.role === 'admin' && <View style={styles.admin}><Pressable accessibilityRole="button" onPress={() => router.push('/explore/import')} style={styles.adminButton}><Text style={styles.chipText}>Import local motors</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/explore/[id]/create', params: { id: 'new' } })} style={styles.adminButton}><Text style={styles.chipText}>+ Add motor</Text></Pressable></View>}
       </View>}
-      renderItem={({ item }) => <CatalogCard motor={item} />}
+      renderItem={({ item }) => <View style={styles.motorItem}>
+        <CatalogCard motor={item} />
+        {user?.role === 'client' && <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${hasMotor(item.id) ? 'Remove' : 'Add'} ${item.name} ${hasMotor(item.id) ? 'from' : 'to'} booking`}
+          accessibilityState={{ selected: hasMotor(item.id) }}
+          onPress={() => hasMotor(item.id) ? removeMotor(item.id) : addMotor(item)}
+          style={[styles.addButton, hasMotor(item.id) && styles.addedButton]}
+        >
+          <Text style={[styles.addButtonText, hasMotor(item.id) && styles.addedButtonText]}>{hasMotor(item.id) ? '✓ Added to booking' : '＋ Add to booking'}</Text>
+        </Pressable>}
+      </View>}
       ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyTitle}>{motors.length ? 'No matching rides' : 'More rides on the way'}</Text><Text style={styles.copy}>{motors.length ? 'Try another name or choose a different type.' : 'There are no motors listed yet. Pull down to check again.'}</Text>{!!(search || selectedType) && <Pressable accessibilityRole="button" style={styles.adminButton} onPress={() => { setQuery(''); setType(null); }}><Text style={styles.chipText}>Clear search and filters</Text></Pressable>}</View>}
     />
   </MainSafe>;
 }
 const styles = StyleSheet.create({
-  list: { padding: 22, gap: 18, paddingBottom: 32, maxWidth: 780, width: '100%', alignSelf: 'center' }, header: { gap: 14 },
+  list: { padding: 22, gap: 18, paddingBottom: 32, maxWidth: 780, width: '100%', alignSelf: 'center' }, header: { gap: 14 }, motorItem: { gap: 10 },
   eyebrow: { fontSize: 10, color: '#526e65', letterSpacing: 1.8, fontWeight: '800' }, title: { fontSize: 32, fontWeight: '800', color: '#183334' }, copy: { fontSize: 14, lineHeight: 22, color: '#687a75' },
-  search: { backgroundColor: '#faf8f2', borderWidth: 1, borderColor: '#dce0d5', borderRadius: 14, padding: 16, fontSize: 15, color: '#183334', minHeight: 52 }, filters: { gap: 10 }, chip: { backgroundColor: '#e6eadd', paddingVertical: 13, paddingHorizontal: 18, borderRadius: 24 }, selected: { backgroundColor: '#21484a' }, chipText: { color: '#21484a', fontSize: 13, fontWeight: '700' }, selectedText: { color: '#faf8f2' }, count: { color: '#687a75', fontSize: 13 }, admin: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, adminButton: { backgroundColor: '#e2e9df', padding: 15, borderRadius: 12, minHeight: 44 }, empty: { padding: 24, gap: 14, backgroundColor: '#faf8f2', borderRadius: 20 }, emptyTitle: { color: '#183334', fontSize: 22, fontWeight: '800' },
+  search: { backgroundColor: '#faf8f2', borderWidth: 1, borderColor: '#dce0d5', borderRadius: 14, padding: 16, fontSize: 15, color: '#183334', minHeight: 52 }, filters: { gap: 10 }, chip: { backgroundColor: '#e6eadd', paddingVertical: 13, paddingHorizontal: 18, borderRadius: 24 }, selected: { backgroundColor: '#21484a' }, chipText: { color: '#21484a', fontSize: 13, fontWeight: '700' }, selectedText: { color: '#faf8f2' }, count: { color: '#687a75', fontSize: 13 }, bookingLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#e2e9df' }, bookingLinkText: { color: '#21484a', fontSize: 14, fontWeight: '800' }, addButton: { minHeight: 48, borderRadius: 12, backgroundColor: '#21484a', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 }, addButtonText: { color: '#faf8f2', fontSize: 14, fontWeight: '800' }, addedButton: { backgroundColor: '#e2e9df' }, addedButtonText: { color: '#21484a' }, admin: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, adminButton: { backgroundColor: '#e2e9df', padding: 15, borderRadius: 12, minHeight: 44 }, empty: { padding: 24, gap: 14, backgroundColor: '#faf8f2', borderRadius: 20 }, emptyTitle: { color: '#183334', fontSize: 22, fontWeight: '800' },
 });
