@@ -6,7 +6,6 @@ import MainSafe from '@/components/mainsafe';
 import ProductCard from '@/components/productcard';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
-import { useBookingCart } from '@/context/BookingContext';
 import { useMotorInventory } from '@/context/MotorContext';
 import { inventoryErrorMessage } from '@/services/inventory';
 
@@ -14,7 +13,6 @@ export default function MotorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { motors, deleteMotor } = useMotorInventory();
-  const { addMotor, removeMotor, hasMotor } = useBookingCart();
   const motor = motors.find((m) => m.id === (Array.isArray(id) ? id[0] : id));
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
