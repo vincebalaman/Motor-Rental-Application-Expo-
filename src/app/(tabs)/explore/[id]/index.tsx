@@ -62,21 +62,11 @@ export default function MotorDetailScreen() {
               </View>
             </ProductCard>
 
-            {user?.role === 'client' && <View style={styles.bookingActions}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`${hasMotor(motor.id) ? 'Remove' : 'Add'} ${motor.name} ${hasMotor(motor.id) ? 'from' : 'to'} booking`}
-                accessibilityState={{ selected: hasMotor(motor.id) }}
-                onPress={() => hasMotor(motor.id) ? removeMotor(motor.id) : addMotor(motor)}
-                style={[styles.bookingButton, hasMotor(motor.id) && styles.bookingButtonSelected]}
-              >
-                <Text style={[styles.bookingButtonText, hasMotor(motor.id) && styles.bookingButtonSelectedText]}>{hasMotor(motor.id) ? '✓ Added to booking' : '＋ Add to booking'}</Text>
-              </Pressable>
-              {hasMotor(motor.id) && <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.viewBookingButton}>
-                <Text style={styles.viewBookingText}>View booking</Text>
-              </Pressable>}
+            {user?.role === 'client' && <View style={styles.confirmation}>
+              <Text style={styles.confirmationTitle}>Ready to plan your ride?</Text>
+              <Text style={styles.notFoundText}>Choose your dates and review the total. Requests require admin approval.</Text>
+              <SubmitButton title="REQUEST BOOKING" onPress={() => router.push({ pathname: '/explore/[id]/book', params: { id: motor.id } })} />
             </View>}
-
             {user?.role === 'admin' && <View style={styles.actions}>
               <Pressable
                 style={styles.editButton}

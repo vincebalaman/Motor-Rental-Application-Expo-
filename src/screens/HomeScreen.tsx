@@ -1,4 +1,6 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
+import { useBookings } from '@/context/BookingContext';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import CatalogCard from '@/components/catalog-card';
 import MainSafe from '@/components/mainsafe';
@@ -10,14 +12,17 @@ import AdminHomeScreen from './AdminHomeScreen';
 export default function HomeScreen() {
   const { user } = useAuth();
   const { motors, loading, error, retry, refreshing, refresh, refreshError } = useMotorInventory();
+  const { bookings, error: bookingError, refresh: refreshBookings } = useBookings();
+  useFocusEffect(useCallback(() => { refreshBookings(); }, [refreshBookings]));
+  const latest = bookings[0];
   if (user?.role === 'admin') return <AdminHomeScreen />;
-  return <MainSafe><ScrollView contentContainerStyle={styles.page} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#21484a" />}>
+  return <MainSafe><ScrollView contentContainerStyle={styles.page} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { refresh(); refreshBookings(); }} tintColor="#21484a" />}>
     <View style={styles.header}><View style={styles.greeting}><Text style={styles.brand}>MOTORRENT</Text><Text style={styles.hello}>Hi, {user?.fullName.split(' ')[0] || 'there'}.</Text></View><Pressable onPress={() => router.navigate('/account')} accessibilityRole="button" accessibilityLabel="Open your account" style={styles.avatar}><Text style={styles.initial}>{user?.fullName.charAt(0).toUpperCase()}</Text></Pressable></View>
     <View style={styles.hero}><Text style={styles.eyebrow}>A RIDE FOR YOUR EVERYDAY</Text><Text style={styles.title}>Your next trip{ '\n' }starts here.</Text><Text style={styles.heroCopy}>Find a motor that fits your plans and your budget.</Text><SubmitButton title="BROWSE MOTORS  →" onPress={() => router.navigate('/explore')} style={styles.button} /></View>
     <View style={styles.heading}><View><Text style={styles.section}>Explore the collection</Text><Text style={styles.copy}>A few rides to get you started.</Text></View><Pressable accessibilityRole="button" onPress={() => router.navigate('/explore')} style={styles.linkButton}><Text style={styles.link}>See all →</Text></Pressable></View>
     {loading ? <ActivityIndicator color="#21484a" accessibilityLabel="Loading motors" /> : error ? <View style={styles.notice}><Text accessibilityRole="alert" style={styles.copy}>{error}</Text><SubmitButton title="TRY AGAIN" onPress={retry} /></View> : motors.length ? motors.slice(0, 3).map(motor => <CatalogCard key={motor.id} motor={motor} />) : <View style={styles.notice}><Text style={styles.section}>More rides on the way</Text><Text style={styles.copy}>There are no motors listed yet. Pull down to check again.</Text></View>}
     {refreshError && <Text accessibilityRole="alert" style={styles.copy}>{refreshError}</Text>}
-    <View style={styles.notice}><Text style={styles.section}>Plan your next ride</Text><Text style={styles.copy}>Browse motor details and daily rates now. Booking requests and admin approvals are coming next.</Text><Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.linkButton}><Text style={styles.link}>My Bookings →</Text></Pressable></View>
+    <View style={styles.notice}><Text style={styles.section}>Plan your next ride</Text><Text style={styles.copy}>{bookingError ? 'Your booking status could not be refreshed. Open My Bookings to try again.' : latest ? `${latest.motor_name} · ${latest.pickup_date} → ${latest.return_date} · ${latest.status.charAt(0).toUpperCase() + latest.status.slice(1)}` : 'Choose your dates and send a booking request. You can track admin approval in My Bookings.'}</Text><Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.linkButton}><Text style={styles.link}>My Bookings →</Text></Pressable></View>
   </ScrollView></MainSafe>;
 }
 const styles = StyleSheet.create({
