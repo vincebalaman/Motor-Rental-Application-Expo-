@@ -10,31 +10,6 @@ backend-assigned admins create, edit, and archive listings. Existing SQLite data
 on the device; there is no automatic seeding or upload into the shared database.
 The app no longer opens the local database during normal startup.
 
-## Import the original phone's SQLite motors
-
-1. In Supabase SQL Editor, run the entire new migration
-   `supabase/migrations/20261117000200_local_motor_import.sql` once. It adds an
-   admin-only import function and mapping table. Do not rerun the original migration.
-2. On the phone holding the original SQLite catalog, log in as an Administrator and
-   open Explore → **Import motors from this device**.
-3. Review the active motor names, descriptions, prices, and image URLs. Select the
-   motors you want, then press **IMPORT … SELECTED**. Archived local motors are excluded.
-4. Wait for the per-motor results. Completed imports are marked Imported. Unconfirmed
-   items may be retried; the server returns the same cloud motor if a previous request
-   committed but its response was lost. Use Stop to stop after the current motor.
-5. Return to Explore, then refresh the client catalog on another device.
-
-The tool never seeds local sample rows or imports accounts/passwords. It adds a small
-`motor_import_metadata` table holding a stable source ID; existing motor records remain
-unchanged. Supabase creates the motor and its source/local-ID mapping atomically.
-Concurrent requests for the same source record produce one motor. An archived imported
-motor is still treated as imported and will not be resurrected by retrying.
-
-This is a one-time copy, not ongoing SQLite-to-cloud synchronization. Make subsequent
-edits in the shared catalog. Separate device databases have separate identities, so
-import your original catalog from one device rather than every team member's samples.
-Only HTTPS image references can be imported; local image files need a separate upload.
-
 ## Shared inventory device checklist
 
 1. Assign your intended Auth user the admin role with the trusted SQL below, then
@@ -166,14 +141,10 @@ imports will be an explicit admin task, with UUID mapping, and will run once.
 
 Backend tests start a temporary PostgreSQL instance using only a private Unix socket,
 apply minimal stand-ins for Supabase's Auth/Storage interfaces, and execute the actual
-migrations under guest/client/admin roles, including concurrent import retry checks. The server stops afterward; test logs stay
+migration under guest/client/admin roles. The server stops afterward; test logs stay
 in the printed temporary directory. These checks verify SQL policies and triggers;
 they do not verify hosted email delivery, Storage API limits, or a live Supabase login.
 
 References: [React Native authentication](https://supabase.com/docs/guides/auth/quickstarts/react-native),
 [row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security),
 [password recovery](https://supabase.com/docs/guides/auth/passwords).
-
-## Password reset emails
-
-Password recovery is implemented through Supabase Auth. Configure the callback allowlist and complete the device checks in [password-recovery.md](password-recovery.md). No database migration is needed for this step.
