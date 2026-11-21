@@ -458,5 +458,30 @@ Device checks: cancel an approved future booking and one beginning today, verify
 reason and timestamp as the client, confirm dates become available, and refresh admin
 counts. Try blank/short reasons, retry a failed request, open the same booking on two
 admin devices, and race pickup against cancellation. In Use and Completed must never
-be cancellable. Check client pending cancellation still works. Rejection reasons and
-no-show handling remain separate future changes.
+be cancellable. Check client pending cancellation still works. No-show handling remains a separate future change. Rejection reasons require the migration below.
+
+
+## Client-visible rejection reasons
+
+Apply `supabase/migrations/20261121000500_booking_rejection_reasons.sql` once after
+the prior migrations. Admin Bookings → Pending → Reject now requires a 5–500 character
+reason before confirmation. Whitespace is normalized. The admin is told explicitly
+that the client can read it; avoid internal-only notes in this field.
+
+`admin_reject_booking` requires an admin role, locks the same motor/booking rows as
+approval, and accepts only pending requests. It records the admin ID, server time,
+and reason, preserving original dates and total. Matching retries return the recorded
+decision; different reasons cannot overwrite it. Clients cannot write these fields
+or read another client's rejection. Approval still uses `review_motor_booking`; its
+old rejection path now refuses to operate without a reason, so older app versions
+must update before rejecting requests.
+
+Clients see the reason and timestamp in booking details, while admins see it in the
+Rejected queue. Existing rejected records remain valid and show an honest no-reason
+message instead of fabricated audit data. Neither cancellation nor approved/in-use
+rental transitions are broadened. Explore files remain unchanged.
+
+Test short/blank/long reasons, successful rejection, client details after refresh,
+retry after a lost connection, already-approved requests, different admin decisions,
+and old rejected history. The server checks the status again before committing, so
+stale screens cannot overwrite a completed decision. No-show handling is still next.

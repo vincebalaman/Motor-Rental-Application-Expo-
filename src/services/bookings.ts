@@ -6,6 +6,7 @@ export type Booking = {
   id: string; client_id: string; motor_id: string; motor_name: string;
   pickup_date: string; return_date: string; daily_rate_centavos: number; total_centavos: number;
   picked_up_at?: string | null; returned_at?: string | null; picked_up_by?: string | null; returned_by?: string | null;
+  rejected_at?: string | null; rejected_by?: string | null; rejection_reason?: string | null;
   cancelled_at?: string | null; cancelled_by?: string | null; cancellation_source?: 'client' | 'admin' | null; cancellation_reason?: string | null;
   status: BookingStatus; created_at: string; updated_at: string;
 };
@@ -14,6 +15,8 @@ export const ADMIN_BOOKING_PAGE_SIZE = 50;
 export function adminBookingErrorMessage(error: unknown): string {
   const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
   const messages: Record<string, string> = {
+    booking_rejection_reason_required: 'Enter a rejection reason using 5–500 characters. The client will see this reason.',
+    booking_rejection_conflict: 'This request was already rejected with a different reason. Refresh to read the recorded decision.',
     booking_cancellation_reason_required: 'Enter a cancellation reason using 5–500 characters. The client will see this reason.',
     booking_cancellation_conflict: 'This booking was already cancelled with a different reason. Refresh to read the recorded decision.',
     booking_cannot_admin_cancel: 'Only approved bookings that have not been picked up can be cancelled. Refresh to see the current status.',
@@ -34,6 +37,11 @@ export class BookingError extends Error {}
 export function cancellationReason(value: string): string {
   const reason = value.trim().replace(/\s+/g, ' ');
   if (Array.from(reason).length < 5 || Array.from(reason).length > 500) throw new BookingError('Enter a cancellation reason using 5–500 characters. The client will see this reason.');
+  return reason;
+}
+export function rejectionReason(value: string): string {
+  const reason = value.trim().replace(/\s+/g, ' ');
+  if (Array.from(reason).length < 5 || Array.from(reason).length > 500) throw new BookingError('Enter a rejection reason using 5–500 characters. The client will see this reason.');
   return reason;
 }
 const DAY = 86400000;
@@ -115,7 +123,14 @@ export function createBookingService(client: SupabaseClient) {
       const clients = new Map<string, NonNullable<AdminBooking['client']>>((profiles ?? []).map(profile => [profile.id, profile]));
       return { bookings: rows.map(row => ({ ...row, client: clients.get(row.client_id) ?? null })), hasMore: rows.length === ADMIN_BOOKING_PAGE_SIZE };
     },
-    async review(id: string, approve: boolean): Promise<Booking> {
+    async review(id: string, approve: boolean, reason = ''): Promise<Booking> {
+      if (!approve) {
+        const normalized = rejectionReason(reason);
+        const { data, error } = await client.rpc('admin_reject_booking', { p_booking_id: id, p_reason: normalized });
+        if (error) throw error;
+        if (!data || data.id !== id || data.status !== 'rejected' || data.rejection_reason !== normalized || !data.rejected_at) throw new BookingError('Rejection could not be confirmed. Refresh bookings to check the recorded decision.');
+        return data;
+      }
       const { data, error } = await client.rpc('review_motor_booking', { p_booking_id: id, p_approve: approve });
       if (error) throw error;
       if (!data?.id || data.id !== id || data.status !== (approve ? 'approved' : 'rejected')) {

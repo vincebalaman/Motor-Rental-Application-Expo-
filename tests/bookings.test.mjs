@@ -76,10 +76,10 @@ test('profile lookup failure does not masquerade as missing client details', asy
 });
 test('admin decisions use guarded review RPC and verify confirmed status', async () => {
   const calls = [];
-  const service = createBookingService({ rpc: async (name, args) => { calls.push([name, args]); return { data: { id: args.p_booking_id, status: args.p_approve ? 'approved' : 'rejected' }, error: null }; } });
+  const service = createBookingService({ rpc: async (name, args) => { calls.push([name, args]); return { data: { id: args.p_booking_id, status: args.p_approve ? 'approved' : 'rejected', rejection_reason: args.p_reason, rejected_at: '2026-11-21T00:00:00Z' }, error: null }; } });
   assert.equal((await service.review('b1', true)).status, 'approved');
-  assert.equal((await service.review('b2', false)).status, 'rejected');
-  assert.deepEqual(calls, [['review_motor_booking', { p_booking_id: 'b1', p_approve: true }], ['review_motor_booking', { p_booking_id: 'b2', p_approve: false }]]);
+  assert.equal((await service.review('b2', false, 'Dates unavailable')).status, 'rejected');
+  assert.deepEqual(calls, [['review_motor_booking', { p_booking_id: 'b1', p_approve: true }], ['admin_reject_booking', { p_booking_id: 'b2', p_reason: 'Dates unavailable' }]]);
   await assert.rejects(createBookingService({ rpc: async () => ({ data: { id: 'b1', status: 'pending' }, error: null }) }).review('b1', true));
 });
 test('admin errors explain conflicts without exposing arbitrary backend text', async () => {
@@ -123,4 +123,22 @@ test('cancellation transition errors provide safe retry guidance',async()=>{
   assert.match(adminBookingErrorMessage({message:'booking_cannot_admin_cancel'}),/not been picked up/);
   assert.match(adminBookingErrorMessage({message:'booking_cancellation_conflict'}),/already cancelled/);
   assert.match(adminBookingErrorMessage({message:'booking_cancellation_reason_required'}),/5–500/);
+});
+
+test('rejection normalizes reason and blocks short or oversized entries before RPC',async()=>{
+  const {rejectionReason}=await import('../src/services/bookings.ts');
+  assert.equal(rejectionReason('  Dates\n  not available '),'Dates not available');
+  for(const reason of ['', '    ', 'tiny', 'x'.repeat(501)]) assert.throws(()=>rejectionReason(reason));
+  let calls=0;
+  await assert.rejects(createBookingService({rpc:async()=>{calls++;return {};}}).review('id',false));
+  assert.equal(calls,0);
+});
+test('rejection must confirm the booking, reason and decision time before success',async()=>{
+  const good={id:'b',status:'rejected',rejection_reason:'Dates unavailable',rejected_at:'time'};
+  for(const data of [null,{...good,id:'other'},{...good,status:'approved'},{...good,rejection_reason:'Different recorded decision'},{...good,rejected_at:null}]) await assert.rejects(createBookingService({rpc:async()=>({data,error:null})}).review('b',false,'Dates unavailable'));
+});
+test('rejection errors give a safe next step',async()=>{
+  const {adminBookingErrorMessage}=await import('../src/services/bookings.ts');
+  assert.match(adminBookingErrorMessage({message:'booking_rejection_reason_required'}),/5–500/);
+  assert.match(adminBookingErrorMessage({message:'booking_rejection_conflict'}),/already rejected/);
 });

@@ -8,7 +8,7 @@ import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabaseClient } from '@/lib/supabase';
-import { type AdminBooking, adminBookingErrorMessage, cancellationReason, createBookingService, manilaToday } from '@/services/bookings';
+import { type AdminBooking, adminBookingErrorMessage, cancellationReason, rejectionReason, createBookingService, manilaToday } from '@/services/bookings';
 
 import { type AdminBookingView, adminViewLabels as labels, parseAdminView, parseDashboardDate } from '@/services/admin-dashboard';
 import { formatBookingDate } from '@/services/booking-calendar';
@@ -53,7 +53,7 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
       const result = await service.listAdmin(filter, start, operationsDate);
       if (!focused.current || request !== revision.current) return;
       setRows(current => more ? [...current, ...result.bookings.filter(row => !current.some(old => old.id === row.id))] : result.bookings);
-      if (!more) setConfirmation(current => current?.cancel && !result.bookings.some(row => row.id === current.id && row.status === 'approved') ? null : current);
+      if (!more) setConfirmation(current => current && ((current.cancel && !result.bookings.some(row => row.id === current.id && row.status === 'approved')) || (current.approve === false && !result.bookings.some(row => row.id === current.id && row.status === 'pending'))) ? null : current);
       offset.current = start + result.bookings.length;
       setHasMore(result.hasMore);
     } catch {
@@ -79,13 +79,15 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
     if (!confirmation || running.current) return;
     const { id, approve, handover, cancel } = confirmation;
     if (cancel) { try { cancellationReason(reason); } catch { setActionError('Enter a cancellation reason using 5–500 characters. The client will see this reason.'); return; } }
+    const rejecting = !cancel && !handover && approve === false;
+    if (rejecting) { try { rejectionReason(reason); } catch { setActionError('Enter a rejection reason using 5–500 characters. The client will see this reason.'); return; } }
     let cancellationFailed = false;
     running.current = true; setBusy(true); setActionError(null); setNotice(null);
     try {
-      const booking = cancel ? await service.cancelApproved(id, reason) : handover ? await service.handover(id, handover) : await service.review(id, approve === true);
+      const booking = cancel ? await service.cancelApproved(id, reason) : handover ? await service.handover(id, handover) : await service.review(id, approve === true, reason);
       if (focused.current) setNotice(`${cancel ? 'Booking cancelled' : handover ? handover === 'pickup' ? 'Pickup recorded' : 'Return recorded' : approve ? 'Approved' : 'Rejected'}: ${booking.motor_name}.`);
     } catch (cause) {
-      cancellationFailed = !!cancel;
+      cancellationFailed = !!cancel || rejecting;
       if (focused.current) setActionError(adminBookingErrorMessage(cause));
     } finally {
       running.current = false; setBusy(false); if (!cancellationFailed) setConfirmation(null);
@@ -123,6 +125,7 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
           <Text selectable style={styles.reference}>Reference: {item.id}</Text>
           {!!item.picked_up_at && <Text style={styles.copy}>Picked up: {new Date(item.picked_up_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (PH)</Text>}
           {!!item.returned_at && <Text style={styles.copy}>Returned: {new Date(item.returned_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (PH)</Text>}
+          {item.status === 'rejected' && <View style={styles.confirmation}><Text style={styles.heading}>Rejection reason</Text><Text style={styles.copy}>{item.rejection_reason || 'No reason recorded for this older request.'}</Text>{!!item.rejected_at && <Text style={styles.copy}>{new Date(item.rejected_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (PH)</Text>}</View>}
           {item.cancellation_source && <View style={styles.confirmation}><Text style={styles.heading}>{item.cancellation_source === 'admin' ? 'Cancelled by rental shop' : 'Cancelled by client'}</Text>{!!item.cancellation_reason && <Text style={styles.copy}>{item.cancellation_reason}</Text>}{!!item.cancelled_at && <Text style={styles.copy}>{new Date(item.cancelled_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (PH)</Text>}</View>}
           {item.status === 'approved' && confirmation?.id === item.id && confirmation.cancel && <View style={styles.confirmation}>
             <Text style={styles.heading}>Cancel this approved booking?</Text>
@@ -148,11 +151,16 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
             {confirmation?.id === item.id ? <View style={styles.confirmation}>
               <Text style={styles.heading}>{confirmation.approve ? 'Approve this booking?' : 'Reject this request?'}</Text>
               <Text style={styles.copy}>{confirmation.approve ? 'This reserves the motor for these dates. Availability will be checked again when you confirm.' : 'The client will see Rejected in My Bookings. This decision cannot be undone in the app.'}</Text>
+              {!confirmation.approve && <>
+                <TextInput accessibilityLabel="Rejection reason, visible to client" placeholder="Explain why this request is being declined" placeholderTextColor="#85907e" multiline textAlignVertical="top" maxLength={500} value={reason} onChangeText={setReason} editable={!busy} style={styles.reasonInput} />
+                <Text style={styles.copy}>{Array.from(reason).length}/500 characters · Minimum 5 · Visible to client</Text>
+                {actionError && <Text style={styles.error}>{actionError}</Text>}
+              </>}
               <SubmitButton title={confirmation.approve ? 'CONFIRM APPROVAL' : 'CONFIRM REJECTION'} onPress={() => { void review(); }} isSubmitting={busy} style={!confirmation.approve ? styles.reject : undefined} />
               <Pressable accessibilityRole="button" disabled={busy} onPress={() => setConfirmation(null)} style={styles.action}><Text style={styles.chipText}>Keep pending</Text></Pressable>
             </View> : <View style={styles.actions}>
               {!expired && <Pressable accessibilityRole="button" accessibilityLabel={`Approve booking for ${item.motor_name}`} disabled={busy} style={[styles.action, styles.approve]} onPress={() => { setConfirmation({ id: item.id, approve: true }); setActionError(null); setNotice(null); }}><Text style={styles.selectedText}>Approve</Text></Pressable>}
-              <Pressable accessibilityRole="button" accessibilityLabel={`Reject booking for ${item.motor_name}`} disabled={busy} style={[styles.action, styles.rejectOutline]} onPress={() => { setConfirmation({ id: item.id, approve: false }); setActionError(null); setNotice(null); }}><Text style={styles.error}>Reject</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Reject booking for ${item.motor_name}`} disabled={busy} style={[styles.action, styles.rejectOutline]} onPress={() => { setReason(''); setConfirmation({ id: item.id, approve: false }); setActionError(null); setNotice(null); }}><Text style={styles.error}>Reject</Text></Pressable>
             </View>}
           </>}
         </View>;

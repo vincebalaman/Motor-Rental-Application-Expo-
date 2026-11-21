@@ -22,13 +22,15 @@ trap cleanup EXIT INT TERM
   -f supabase/migrations/20261121000200_rental_handover.sql \
   -f supabase/migrations/20261121000300_admin_dashboard.sql \
   -f supabase/migrations/20261121000400_admin_booking_cancellation.sql \
+  -f supabase/migrations/20261121000500_booking_rejection_reasons.sql \
   -f supabase/tests/permissions.sql \
   -f supabase/tests/local-import.sql \
   -f supabase/tests/bookings.sql \
   -f supabase/tests/booking-calendar.sql \
   -f supabase/tests/rental-handover.sql \
   -f supabase/tests/admin-dashboard.sql \
-  -f supabase/tests/admin-cancellation.sql >"$TEST_ROOT/results.log" 2>&1 || {
+  -f supabase/tests/admin-cancellation.sql \
+  -f supabase/tests/rejection-reasons.sql >"$TEST_ROOT/results.log" 2>&1 || {
     cat "$TEST_ROOT/results.log"
     exit 1
   }
