@@ -116,5 +116,21 @@ booking_sql -f supabase/tests/timed-return-concurrent.sql >"$TEST_ROOT/timed-ret
 SECOND_PID=$!
 wait "$FIRST_PID"
 wait "$SECOND_PID"
+booking_sql -f supabase/migrations/20261121000800_booking_notifications.sql -f supabase/tests/notifications.sql >>"$TEST_ROOT/results.log" 2>&1 || {
+  tail -80 "$TEST_ROOT/results.log"
+  exit 1
+}
+booking_sql -f supabase/tests/notification-concurrent-setup.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/tests/notification-concurrent.sql >"$TEST_ROOT/notification-1.log" 2>&1 &
+FIRST_PID=$!
+booking_sql -f supabase/tests/notification-concurrent.sql >"$TEST_ROOT/notification-2.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
+booking_sql -f supabase/tests/notification-concurrent-check.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/migrations/20261121000900_profile_photos.sql -f supabase/tests/profile-photos.sql >>"$TEST_ROOT/results.log" 2>&1 || {
+  tail -80 "$TEST_ROOT/results.log"
+  exit 1
+}
 tail -5 "$TEST_ROOT/results.log"
 echo "Local PostgreSQL test logs: $TEST_ROOT"

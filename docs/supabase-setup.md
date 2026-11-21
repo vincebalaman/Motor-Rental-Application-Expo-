@@ -567,3 +567,107 @@ pickup and return, then check the stored breakdown on both accounts. Test Androi
 and iPhone time selection, business date rollovers, adjacent bookings, expired
 pickup approval, and a legacy booking. Use development fixtures to exercise late
 returns without changing real client records.
+
+
+## Booking notification inbox
+
+Apply `supabase/migrations/20261121000800_booking_notifications.sql` once after 007.
+This adds a private notification inbox for clients and admins. It requires no new
+environment variables or native dependencies. The bell on Home and the Account
+notification row open the inbox. An amber bell dot means updates could not be
+loaded; an unavailable inbox never blocks login or session restoration.
+
+Booking triggers create alerts in the same database transaction as the actual
+booking change. Every current admin receives new pending-request alerts and client
+cancellations. The booking owner receives approval, rejection, cancellation,
+pickup, return, and no-show alerts, including client-visible decision reasons.
+Retries cannot duplicate an event. Old booking decisions are not backfilled.
+
+The inbox refreshes on opening, app foregrounding, and every 30 seconds while the
+app is active. It generates one upcoming pickup or return reminder per booking
+within the next 24 hours, and one overdue alert while a rental remains in use.
+For legacy date-only records, pickup reminders use the pickup day, return reminders
+the day before the return date, and overdue uses the existing return-date rule.
+Reminder timing uses the database clock and Asia/Manila dates. No time is invented
+for legacy agreements. Alerts are historical records: opening one always loads the
+current booking, so an earlier pickup reminder may now open a cancelled booking.
+
+This phase is an **in-app inbox**, not phone push, email, or a background scheduler.
+No notification permission prompt is needed. Reminder records are created when the
+recipient's app checks their inbox; nothing is delivered while the app is closed.
+Phone push notifications and scheduled delivery can be added separately later.
+
+The table uses RLS and grants only SELECT to authenticated users. Each user can
+read only their own alerts for their current role; admins cannot read another
+admin's inbox. There is no direct client INSERT/UPDATE/DELETE. Mark-read RPCs scope
+writes to the authenticated recipient and current role, preserve existing read
+timestamps, and return the actual remaining unread count. Mark all read includes
+older pages and leaves alerts created after its server timestamp unread. Keyset
+pagination returns 50 records plus a full unread count. Background refresh preserves
+loaded history when it overlaps the newest page, resetting safely if many new
+arrivals would leave a gap. Role/account changes remount the provider and clear
+previous-account state. Errors retain the last loaded data and offer retry.
+
+Client alerts open `/bookings/[bookingId]`. Admin alerts open only that booking in
+Admin Bookings with a View all bookings link. These destinations are constructed
+from a validated booking UUID and current role; notifications cannot supply an
+arbitrary URL or approve/cancel a booking automatically. The normal booking RLS,
+role checks, confirmation forms, and concurrency guards still apply.
+
+Checks: `npm test`, `npx tsc --noEmit`, ESLint, and `npm run test:backend`.
+The isolated SQL suite verifies private recipients, direct-write restrictions,
+role changes, atomic status alerts, reasons, reminder eligibility, pagination,
+read timestamp preservation, and concurrent reminder/read requests.
+Device checks with two accounts: submit as client, open the admin bell, approve the
+linked booking, and check the client's unread badge and details link. Test rejection
+and cancellation reasons, pickup/return updates, single-read and mark-all-read, a
+second recipient's privacy, app foreground refresh, and a development booking near
+pickup/return. Verify loading/error states before applying the migration too.
+
+## Motor photo uploads
+
+Admin Add/Edit Motor forms accept one gallery or camera photo and show a preview.
+Picking or cancelling does not upload anything. Save validates motor details first,
+then uploads a resized JPEG (longest edge at most 2048 pixels, at most 5 MiB) to the
+existing private `motor-images` bucket and saves its path on the motor. Existing
+HTTPS images and imported storage paths continue to display without conversion.
+
+No new SQL migration is needed if the accounts/inventory migration is installed.
+Storage RLS allows admin writes; clients can read only photos linked to active
+motors. Photos use unique `motors/uploads/<user UUID>/<selection UUID>.jpg` paths.
+Retries of the same selection reuse that path. Replacements never overwrite the
+previous photo. Old/unlinked files are deliberately retained: storage and database
+writes are separate requests, and a network timeout does not prove a save failed.
+An uncertain motor save still asks the admin to refresh the catalog before retrying.
+Do not delete objects without checking all motor references, including archives.
+
+Run `npm install` on other laptops after pulling these dependencies. Restart Metro
+with `npx expo start --clear`. Expo Go includes the photo tools; custom development
+builds need rebuilding to include the native packages and camera permission config.
+Microphone permission is disabled. Camera access is requested only when taking a
+photo. On web, use Choose a photo (the browser picker opens directly from the click).
+
+Device checks: create with a gallery photo, cancel a selection, take a camera photo,
+deny camera permission, undo an Edit selection, save a replacement, and confirm the
+new image as a client. Check a failed upload leaves the existing listing intact.
+
+## Profile pictures
+
+Apply `supabase/migrations/20261121000900_profile_photos.sql` in the Supabase SQL
+Editor before testing profile pictures. It creates a private `profile-images`
+bucket and a separate `profile_photos` table, so photo setup does not block login
+or change the existing profile/name/phone schema. Both clients and admins can use
+Account → Choose profile photo, preview a gallery/camera image, then Save profile
+photo or Cancel. Images are resized to JPEG using the existing photo tools.
+
+Each account can read and update only its own reference and storage folder, even
+when that account is an admin. The saved reference syncs across devices. Signed
+image URLs are refreshed when returning to the foreground and every 45 active
+minutes. Initials remain the fallback if a photo cannot display. Failed uploads
+do not change the saved reference. Retrying a selected photo reuses its unique
+path; old photos are retained to avoid deleting files after uncertain writes.
+
+Checks: `npm test`, `npx tsc --noEmit`, ESLint, platform exports, and the isolated
+`npm run test:backend` suite include owner/other-client/admin privacy checks.
+Device check with two accounts: save a picture, reopen Account and log in on a
+second device; verify persistence, replace/cancel, and test an upload offline.

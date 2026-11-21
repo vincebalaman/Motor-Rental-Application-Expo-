@@ -26,14 +26,15 @@ function BookingAction({ title, onPress, isSubmitting = false, style, secondary 
 
 export default function AdminBookingsScreen() {
   const { user } = useAuth();
-  const { view, date } = useLocalSearchParams<{ view?: string; date?: string }>();
+  const { view, date, bookingId } = useLocalSearchParams<{ view?: string; date?: string; bookingId?: string }>();
+  const targetBookingId = typeof bookingId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId) ? bookingId : undefined;
   const initialView = parseAdminView(view);
   const operationsDate = parseDashboardDate(date) ?? manilaToday();
   if (user?.role !== 'admin') return <Redirect href="/dashboard" />;
-  return <AdminBookings key={`${user.id}:${initialView}:${operationsDate}`} initialView={initialView} operationsDate={operationsDate} />;
+  return <AdminBookings key={`${user.id}:${initialView}:${operationsDate}:${targetBookingId ?? 'all'}`} initialView={targetBookingId ? null : initialView} operationsDate={operationsDate} targetBookingId={targetBookingId} />;
 }
 
-function AdminBookings({ initialView, operationsDate }: { initialView: AdminBookingView | null; operationsDate: string }) {
+function AdminBookings({ initialView, operationsDate, targetBookingId }: { initialView: AdminBookingView | null; operationsDate: string; targetBookingId?: string }) {
   const clock = useBookingClock();
   const service = useMemo(() => createBookingService(getSupabaseClient()), []);
   const [filter, setFilter] = useState<AdminBookingView | null>(initialView);
@@ -45,7 +46,7 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{ id: string; approve?: boolean; handover?: 'pickup' | 'return'; cancel?: boolean; noShow?: boolean } | null>(null);
-  const [recordId, setRecordId] = useState<string | null>(null);
+  const [recordId, setRecordId] = useState<string | null>(targetBookingId ?? null);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const revision = useRef(0);
@@ -63,7 +64,7 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
     if (more) setLoadingMore(true);
     else { setLoading(true); setLoadingMore(false); }
     try {
-      const result = await service.listAdmin(filter, start, operationsDate);
+      const result = await service.listAdmin(filter, start, operationsDate, targetBookingId);
       if (!focused.current || request !== revision.current) return;
       setRows(current => more ? [...current, ...result.bookings.filter(row => !current.some(old => old.id === row.id))] : result.bookings);
       if (!more) setConfirmation(current => current && (((current.cancel || current.noShow) && !result.bookings.some(row => row.id === current.id && row.status === 'approved')) || (current.approve === false && !result.bookings.some(row => row.id === current.id && row.status === 'pending'))) ? null : current);
@@ -74,7 +75,7 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
     } finally {
       if (focused.current && request === revision.current) { fetching.current = false; setLoading(false); setLoadingMore(false); }
     }
-  }, [filter, service, operationsDate]);
+  }, [filter, service, operationsDate, targetBookingId]);
 
   useFocusEffect(useCallback(() => {
     focused.current = true;
@@ -84,9 +85,9 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
   }, [load]));
 
   const selectFilter = (value: AdminBookingView | null) => {
-    if (running.current || value === filter) return;
+    if (running.current || (value === filter && !targetBookingId)) return;
     revision.current++; offset.current = 0;
-    setRows([]); setHasMore(false); setConfirmation(null); setActionError(null); setNotice(null); setLoading(true); setFilter(value); router.setParams({ view: value ?? 'all', date: operationsDate });
+    setRows([]); setHasMore(false); setConfirmation(null); setActionError(null); setNotice(null); setLoading(true); setFilter(value); router.setParams({ view: value ?? 'all', date: operationsDate, bookingId: undefined });
   };
   const review = async () => {
     if (!confirmation || running.current) return;
@@ -115,7 +116,8 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
       keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets data={rows} keyExtractor={item => item.id} refreshing={loading} onRefresh={() => { void load(); }} contentContainerStyle={styles.page}
       ListHeaderComponent={<View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>Bookings</Text>
-        <Text style={styles.copy}>Review requests and manage active rentals.</Text>
+        <Text style={styles.copy}>{targetBookingId ? 'Booking opened from your notifications.' : 'Review requests and manage active rentals.'}</Text>
+        {targetBookingId && <Pressable accessibilityRole="button" onPress={() => router.replace({ pathname: '/admin-bookings', params: { view: 'all' } })} style={styles.recordButton}><Text style={styles.link}>View all bookings →</Text></Pressable>}
         <ScrollView horizontal keyboardShouldPersistTaps="handled" showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
           {(['pending', 'pickups_today', 'returns_today', 'in_use', 'overdue', 'approved', 'completed', 'rejected', 'cancelled', 'no_show', null] as const).map(value => <Pressable key={value ?? 'all'} accessibilityRole="button" accessibilityState={{ selected: filter === value, disabled: busy }} disabled={busy} onPress={() => selectFilter(value)} style={[styles.chip, filter === value && styles.selected]}><Text style={[styles.chipText, filter === value && styles.selectedText]}>{value ? operationsDate !== manilaToday() && value === 'pickups_today' ? 'Pickups by date' : operationsDate !== manilaToday() && value === 'returns_today' ? 'Returns by date' : labels[value] : 'All'}</Text></Pressable>)}
         </ScrollView>
@@ -124,7 +126,7 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
         {actionError && <Text accessibilityRole="alert" style={styles.error}>{actionError}</Text>}
         {notice && <Text accessibilityRole="alert" style={styles.success}>{notice}</Text>}
       </View>}
-      ListEmptyComponent={loading ? <ActivityIndicator color="#21484a" /> : !loadError ? <View style={styles.card}><Text style={styles.heading}>No bookings to show</Text><Text style={styles.copy}>Pull down to check for new requests.</Text></View> : undefined}
+      ListEmptyComponent={loading ? <ActivityIndicator color="#21484a" /> : !loadError ? <View style={styles.card}><Text style={styles.heading}>No bookings to show</Text><Text style={styles.copy}>{targetBookingId ? 'This booking is no longer available. Open all bookings to check the latest records.' : 'Pull down to check for new requests.'}</Text></View> : undefined}
       renderItem={({ item }) => {
         const expired = bookingTimePassed(item, 'pickup', manilaToday(), clock);
         return <View style={styles.card}>

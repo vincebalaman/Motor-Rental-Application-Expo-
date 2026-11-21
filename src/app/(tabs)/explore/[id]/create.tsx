@@ -9,6 +9,9 @@ import {
   View,
 } from 'react-native';
 
+import { MotorPhotoInput } from '@/components/motor-photo-input';
+import type { MotorPhoto } from '@/services/motor-photos';
+
 import MainSafe from '@/components/mainsafe';
 import { MotorField, MotorFormButton, motorFormStyles as styles } from '@/components/motor-form';
 import { useMotorInventory } from '@/context/MotorContext';
@@ -20,16 +23,18 @@ export default function CreateMotorScreen() {
   const [type, setType] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
-  const [imagePath, setImagePath] = useState('');
+  const imagePath = '';
+  const [photo, setPhoto] = useState<MotorPhoto | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const submitting = useRef(false);
 
   const handleCreate = async () => {
-    if (submitting.current) return;
+    if (submitting.current || photoBusy) return;
     setSaveError(null);
     const parsedPrice = Number(price.trim());
-    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imagePath.trim()) {
+    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || (!photo && !imagePath.trim())) {
       setSaveError('Please complete all motor details.');
       return;
     }
@@ -48,7 +53,7 @@ export default function CreateMotorScreen() {
         price: parsedPrice,
         description: description.trim(),
         imagePath: imagePath.trim(),
-      });
+      }, photo);
       router.replace({
         pathname: '/(tabs)/explore/[id]',
         params: { id: String(motor.id) },
@@ -102,18 +107,10 @@ export default function CreateMotorScreen() {
             />
             </View>
             <View style={styles.panel}><Text style={styles.sectionTitle}>Motor photo</Text>
-            <MotorField
-              editable={!isSubmitting}
-              label="Image link or storage path"
-              hint="Use an HTTPS image link or a path from the motor-images bucket."
-              value={imagePath}
-              onChangeText={setImagePath}
-              placeholder="https://example.com/motor.jpg or motors/photo.jpg"
-              keyboardType="url"
-            />
+            <MotorPhotoInput photo={photo} currentUrl={undefined} onChange={setPhoto} disabled={isSubmitting} onBusyChange={setPhotoBusy} />
             </View>
             {saveError && <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text>}
-            <MotorFormButton title="Create motor" onPress={handleCreate} busy={isSubmitting} />
+            <MotorFormButton title="Create motor" onPress={handleCreate} busy={isSubmitting || photoBusy} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
