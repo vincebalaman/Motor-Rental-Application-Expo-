@@ -19,7 +19,7 @@ export default function BookingCalendar({ range, blocked, today, disabled = fals
     </View></View>
     <Text accessibilityLiveRegion="polite" style={styles.instruction}>{pickupOnly ? 'Choose your pickup date' : choosingReturn ? 'Now choose your return date' : range.returned ? 'Dates selected. Tap a new pickup to start over.' : 'Choose your pickup date'}</Text>
     <View style={styles.grid}>
-      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <View key={`weekday-${index}`} style={styles.cell}><Text style={styles.weekday}>{day}</Text></View>)}
+      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => <View key={`weekday-${index}`} style={styles.cell}><Text style={styles.weekday}>{day}</Text></View>)}
       {monthCells(visibleMonth).map((date, index) => {
         if (!date) return <View key={`blank-${index}`} style={styles.cell} />;
         const unavailable = blocked.includes(date);
@@ -33,12 +33,13 @@ export default function BookingCalendar({ range, blocked, today, disabled = fals
         </View>;
       })}
     </View>
-    <View style={styles.legend}><Text style={styles.legendText}>● Selected</Text><Text style={styles.legendText}>▰ Rental days</Text><Text style={styles.legendText}>× Unavailable</Text></View>
-    <Text style={styles.hint}>{pickupOnly ? 'Crossed-out days are fully booked. Available times are checked against your entire 24-hour rental period.' : 'Your return day is not charged. You can return on the first unavailable day, but cannot rent through it.'}</Text>
+    <View style={styles.legend}><View style={styles.legendItem}><View style={[styles.swatch, styles.endpoint]} /><Text style={styles.legendText}>Selected</Text></View>{!pickupOnly && <View style={styles.legendItem}><View style={[styles.swatch, styles.range]} /><Text style={styles.legendText}>Rental days</Text></View>}<View style={styles.legendItem}><Text style={styles.unavailableSymbol}>×</Text><Text style={styles.legendText}>Unavailable</Text></View></View>
+    <Text style={styles.hint}>{pickupOnly ? 'Crossed-out dates are fully booked. Your selected time and full rental period are checked before booking.' : 'Your return day is not charged. You can return on the first unavailable day, but cannot rent through it.'}</Text>
   </View>;
 }
 const styles = StyleSheet.create({
-  calendar: { padding: 16, backgroundColor: '#faf8f2', borderRadius: 22, borderWidth: 1, borderColor: '#dce2d6', gap: 12 },
-  heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }, title: { color: '#183334', fontSize: 19, fontWeight: '800' }, navigation: { flexDirection: 'row', gap: 4 }, nav: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: '#e7ecdf' }, navText: { color: '#21484a', fontSize: 30 }, faded: { opacity: 0.35 },
-  instruction: { color: '#526e65', fontSize: 13, fontWeight: '700' }, grid: { flexDirection: 'row', flexWrap: 'wrap' }, cell: { width: '14.285714%', minHeight: 44, alignItems: 'center', justifyContent: 'center' }, weekday: { color: '#7e8d83', fontSize: 12, fontWeight: '700' }, day: { width: '100%', minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12 }, dayText: { color: '#21484a', fontSize: 15, fontWeight: '600' }, today: { borderWidth: 1, borderColor: '#8ca58b' }, range: { backgroundColor: '#dfe9d9' }, endpoint: { backgroundColor: '#21484a' }, endpointText: { color: '#fff', fontWeight: '800' }, disabledText: { color: '#a8aea5' }, strike: { textDecorationLine: 'line-through' }, legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 }, legendText: { color: '#526e65', fontSize: 11 }, hint: { color: '#78857d', fontSize: 12, lineHeight: 18 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 }, swatch: { width: 10, height: 10, borderRadius: 3 }, unavailableSymbol: { color: '#65736e', fontSize: 16 },
+  calendar: { padding: 16, backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#e2e5de', gap: 12 },
+  heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }, title: { color: '#1d2928', fontSize: 17, fontWeight: '600' }, navigation: { flexDirection: 'row', gap: 4 }, nav: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: '#f2f5ef' }, navText: { color: '#21484a', fontSize: 30 }, faded: { opacity: 0.35 },
+  instruction: { color: '#65736e', fontSize: 12, fontWeight: '500' }, grid: { flexDirection: 'row', flexWrap: 'wrap' }, cell: { width: '14.285714%', minHeight: 44, alignItems: 'center', justifyContent: 'center' }, weekday: { color: '#65736e', fontSize: 12, fontWeight: '700' }, day: { width: '100%', minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 11 }, dayText: { color: '#21484a', fontSize: 14, fontWeight: '500' }, today: { borderWidth: 1, borderColor: '#8ca58b' }, range: { backgroundColor: '#dfe9d9' }, endpoint: { backgroundColor: '#21484a' }, endpointText: { color: '#fff', fontWeight: '800' }, disabledText: { color: '#8b958d' }, strike: { textDecorationLine: 'line-through' }, legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 }, legendText: { color: '#526e65', fontSize: 11 }, hint: { color: '#65736e', fontSize: 12, lineHeight: 18 },
 });
