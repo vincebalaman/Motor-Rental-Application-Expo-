@@ -623,3 +623,30 @@ linked booking, and check the client's unread badge and details link. Test rejec
 and cancellation reasons, pickup/return updates, single-read and mark-all-read, a
 second recipient's privacy, app foreground refresh, and a development booking near
 pickup/return. Verify loading/error states before applying the migration too.
+
+## Motor photo uploads
+
+Admin Add/Edit Motor forms accept one gallery or camera photo and show a preview.
+Picking or cancelling does not upload anything. Save validates motor details first,
+then uploads a resized JPEG (longest edge at most 2048 pixels, at most 5 MiB) to the
+existing private `motor-images` bucket and saves its path on the motor. Existing
+HTTPS images and imported storage paths continue to display without conversion.
+
+No new SQL migration is needed if the accounts/inventory migration is installed.
+Storage RLS allows admin writes; clients can read only photos linked to active
+motors. Photos use unique `motors/uploads/<user UUID>/<selection UUID>.jpg` paths.
+Retries of the same selection reuse that path. Replacements never overwrite the
+previous photo. Old/unlinked files are deliberately retained: storage and database
+writes are separate requests, and a network timeout does not prove a save failed.
+An uncertain motor save still asks the admin to refresh the catalog before retrying.
+Do not delete objects without checking all motor references, including archives.
+
+Run `npm install` on other laptops after pulling these dependencies. Restart Metro
+with `npx expo start --clear`. Expo Go includes the photo tools; custom development
+builds need rebuilding to include the native packages and camera permission config.
+Microphone permission is disabled. Camera access is requested only when taking a
+photo. On web, use Choose a photo (the browser picker opens directly from the click).
+
+Device checks: create with a gallery photo, cancel a selection, take a camera photo,
+deny camera permission, undo an Edit selection, save a replacement, and confirm the
+new image as a client. Check a failed upload leaves the existing listing intact.

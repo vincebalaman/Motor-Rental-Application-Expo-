@@ -43,7 +43,15 @@
       ],
       "expo-sqlite",
       "expo-image",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a photo for a motor listing.",
+          "cameraPermission": "Take a photo for a motor listing.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

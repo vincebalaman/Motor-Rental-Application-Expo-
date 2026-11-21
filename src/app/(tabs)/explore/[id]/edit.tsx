@@ -10,6 +10,9 @@ import {
   View,
 } from 'react-native';
 
+import { MotorPhotoInput } from '@/components/motor-photo-input';
+import type { MotorPhoto } from '@/services/motor-photos';
+
 import MainSafe from '@/components/mainsafe';
 import { MotorField, MotorFormButton, motorFormStyles as styles } from '@/components/motor-form';
 import { useMotorInventory } from '@/context/MotorContext';
@@ -33,20 +36,22 @@ function EditMotorForm({ motor, motorId }: { motor: Motor; motorId: string }) {
   const [type, setType] = useState(motor.type);
   const [price, setPrice] = useState(String(motor.price));
   const [description, setDescription] = useState(motor.description);
-  const [imagePath, setImagePath] = useState(motor.imagePath);
+  const imagePath = motor.imagePath;
+  const [photo, setPhoto] = useState<MotorPhoto | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const submitting = useRef(false);
 
   const handleSave = async () => {
-    if (submitting.current) return;
+    if (submitting.current || photoBusy) return;
     setSaveError(null);
     const parsedPrice = Number(price.trim());
     if (!motor || !motorId) {
       setSaveError('This motor is no longer available.');
       return;
     }
-    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || !imagePath.trim()) {
+    if (!name.trim() || !type.trim() || !description.trim() || !price.trim() || (!photo && !imagePath.trim())) {
       setSaveError('Please complete all motor details.');
       return;
     }
@@ -65,7 +70,7 @@ function EditMotorForm({ motor, motorId }: { motor: Motor; motorId: string }) {
         price: parsedPrice,
         description: description.trim(),
         imagePath: imagePath.trim(),
-      }, originalUpdatedAt);
+      }, originalUpdatedAt, photo);
       router.replace({
         pathname: '/(tabs)/explore/[id]',
         params: { id: String(motorId) },
@@ -119,18 +124,10 @@ function EditMotorForm({ motor, motorId }: { motor: Motor; motorId: string }) {
             />
             </View>
             <View style={styles.panel}><Text style={styles.sectionTitle}>Motor photo</Text>
-            <MotorField
-              editable={!isSubmitting}
-              label="Image link or storage path"
-              hint="Use an HTTPS image link or a path from the motor-images bucket."
-              value={imagePath}
-              onChangeText={setImagePath}
-              placeholder="https://example.com/motor.jpg or motors/photo.jpg"
-              keyboardType="url"
-            />
+            <MotorPhotoInput photo={photo} currentUrl={motor.imageUrl} onChange={setPhoto} disabled={isSubmitting} onBusyChange={setPhotoBusy} />
             </View>
             {saveError && <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text>}
-            <MotorFormButton title="Save changes" onPress={handleSave} busy={isSubmitting} />
+            <MotorFormButton title="Save changes" onPress={handleSave} busy={isSubmitting || photoBusy} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -14,7 +14,6 @@ create table public.notifications (
 create index notifications_inbox on public.notifications(recipient_id,audience,created_at desc,id desc);
 create index notifications_unread on public.notifications(recipient_id,audience) where read_at is null;
 alter table public.notifications enable row level security;
-revoke all on public.notifications from public,anon,authenticated;
 grant select on public.notifications to authenticated;
 create policy notifications_owner_read on public.notifications for select to authenticated using (
  recipient_id=(select auth.uid()) and exists(select 1 from public.user_roles r where r.user_id=(select auth.uid()) and r.role=audience)

@@ -3,7 +3,9 @@ import { AppState } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
 import { getSupabaseClient } from '@/lib/supabase';
-import { createInventoryService, type Motor, type MotorInput } from '@/services/inventory';
+import { createInventoryService, motorPayload, InventoryError, type Motor, type MotorInput } from '@/services/inventory';
+
+import { uploadMotorPhoto, type MotorPhoto } from '@/services/motor-photos';
 
 type MotorContextValue = {
   motors: Motor[];
@@ -13,8 +15,8 @@ type MotorContextValue = {
   refreshError: string | null;
   retry: () => void;
   refresh: () => void;
-  createMotor: (motor: MotorInput) => Promise<Motor>;
-  updateMotor: (id: string, motor: MotorInput, updatedAt: string) => Promise<void>;
+  createMotor: (motor: MotorInput, photo?: MotorPhoto | null) => Promise<Motor>;
+  updateMotor: (id: string, motor: MotorInput, updatedAt: string, photo?: MotorPhoto | null) => Promise<void>;
   deleteMotor: (id: string, updatedAt: string) => Promise<void>;
 };
 const MotorContext = createContext<MotorContextValue | null>(null);
@@ -65,15 +67,21 @@ export function MotorProvider({ children }: { children: ReactNode }) {
     // An older list response must not overwrite a newly committed mutation.
     revision.current++; setRefreshing(false); setRefreshError(null);
   };
-  const createMotor = async (input: MotorInput) => {
+  const preparePhoto = async (input: MotorInput, photo?: MotorPhoto | null) => {
+    motorPayload({ ...input, imagePath: photo ? 'pending/photo.jpg' : input.imagePath });
+    if (!photo) return input;
+    try { return { ...input, imagePath: await uploadMotorPhoto(getSupabaseClient(), user!.id, photo) }; }
+    catch (error) { throw new InventoryError(error instanceof Error ? error.message : 'The photo could not be uploaded.'); }
+  };
+  const createMotor = async (input: MotorInput, photo?: MotorPhoto | null) => {
     requireAdmin();
-    const motor = await service.create(input);
+    const motor = await service.create(await preparePhoto(input, photo));
     if (active.current) { afterWrite(); setMotors(current => [...current.filter(item => item.id !== motor.id), motor]); }
     return motor;
   };
-  const updateMotor = async (id: string, input: MotorInput, updatedAt: string) => {
+  const updateMotor = async (id: string, input: MotorInput, updatedAt: string, photo?: MotorPhoto | null) => {
     requireAdmin();
-    const motor = await service.update(id, input, updatedAt);
+    const motor = await service.update(id, await preparePhoto(input, photo), updatedAt);
     if (active.current) { afterWrite(); setMotors(current => current.map(item => item.id === id ? motor : item)); }
   };
   const deleteMotor = async (id: string, updatedAt: string) => {
