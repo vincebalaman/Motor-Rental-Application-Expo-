@@ -4,6 +4,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 
 import MainSafe from '@/components/mainsafe';
 import ProfileEditor from '@/components/profile-editor';
+import { useNotifications } from '@/context/NotificationContext';
 import { useAuth } from '@/context/AuthContext';
 
 function SettingsRow({ title, description, onPress, disabled }: {
@@ -16,6 +17,7 @@ function SettingsRow({ title, description, onPress, disabled }: {
 }
 
 export default function AccountScreen() {
+  const { unread, error: notificationError } = useNotifications();
   const { user, loading, logout } = useAuth();
   const [editing, setEditing] = useState(false);
   const [profileBusy, setProfileBusy] = useState(false);
@@ -74,6 +76,7 @@ export default function AccountScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account & security</Text>
+          <View style={styles.card}><SettingsRow title="Notifications" description={notificationError ? 'Check your booking updates' : unread ? `${unread} unread ${unread === 1 ? 'update' : 'updates'}` : 'Booking updates and ride reminders'} disabled={disabled} onPress={() => router.push('/notifications')} /></View>
           <View style={styles.card}><SettingsRow title="Change password" description="Send a password reset email" disabled={disabled} onPress={() => router.push('/auth/forgot-password')} /></View>
         </View>
 

@@ -567,3 +567,59 @@ pickup and return, then check the stored breakdown on both accounts. Test Androi
 and iPhone time selection, business date rollovers, adjacent bookings, expired
 pickup approval, and a legacy booking. Use development fixtures to exercise late
 returns without changing real client records.
+
+
+## Booking notification inbox
+
+Apply `supabase/migrations/20261121000800_booking_notifications.sql` once after 007.
+This adds a private notification inbox for clients and admins. It requires no new
+environment variables or native dependencies. The bell on Home and the Account
+notification row open the inbox. An amber bell dot means updates could not be
+loaded; an unavailable inbox never blocks login or session restoration.
+
+Booking triggers create alerts in the same database transaction as the actual
+booking change. Every current admin receives new pending-request alerts and client
+cancellations. The booking owner receives approval, rejection, cancellation,
+pickup, return, and no-show alerts, including client-visible decision reasons.
+Retries cannot duplicate an event. Old booking decisions are not backfilled.
+
+The inbox refreshes on opening, app foregrounding, and every 30 seconds while the
+app is active. It generates one upcoming pickup or return reminder per booking
+within the next 24 hours, and one overdue alert while a rental remains in use.
+For legacy date-only records, pickup reminders use the pickup day, return reminders
+the day before the return date, and overdue uses the existing return-date rule.
+Reminder timing uses the database clock and Asia/Manila dates. No time is invented
+for legacy agreements. Alerts are historical records: opening one always loads the
+current booking, so an earlier pickup reminder may now open a cancelled booking.
+
+This phase is an **in-app inbox**, not phone push, email, or a background scheduler.
+No notification permission prompt is needed. Reminder records are created when the
+recipient's app checks their inbox; nothing is delivered while the app is closed.
+Phone push notifications and scheduled delivery can be added separately later.
+
+The table uses RLS and grants only SELECT to authenticated users. Each user can
+read only their own alerts for their current role; admins cannot read another
+admin's inbox. There is no direct client INSERT/UPDATE/DELETE. Mark-read RPCs scope
+writes to the authenticated recipient and current role, preserve existing read
+timestamps, and return the actual remaining unread count. Mark all read includes
+older pages and leaves alerts created after its server timestamp unread. Keyset
+pagination returns 50 records plus a full unread count. Background refresh preserves
+loaded history when it overlaps the newest page, resetting safely if many new
+arrivals would leave a gap. Role/account changes remount the provider and clear
+previous-account state. Errors retain the last loaded data and offer retry.
+
+Client alerts open `/bookings/[bookingId]`. Admin alerts open only that booking in
+Admin Bookings with a View all bookings link. These destinations are constructed
+from a validated booking UUID and current role; notifications cannot supply an
+arbitrary URL or approve/cancel a booking automatically. The normal booking RLS,
+role checks, confirmation forms, and concurrency guards still apply.
+
+Checks: `npm test`, `npx tsc --noEmit`, ESLint, and `npm run test:backend`.
+The isolated SQL suite verifies private recipients, direct-write restrictions,
+role changes, atomic status alerts, reasons, reminder eligibility, pagination,
+read timestamp preservation, and concurrent reminder/read requests.
+Device checks with two accounts: submit as client, open the admin bell, approve the
+linked booking, and check the client's unread badge and details link. Test rejection
+and cancellation reasons, pickup/return updates, single-read and mark-all-read, a
+second recipient's privacy, app foreground refresh, and a development booking near
+pickup/return. Verify loading/error states before applying the migration too.

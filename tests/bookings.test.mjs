@@ -174,3 +174,11 @@ test('exact availability rejects an unconfirmed response instead of presenting a
   for (const data of [null, [{ blocked_start: 'bad', blocked_end: 'bad' }], [{ blocked_start: '2026-11-21T01:00Z', blocked_end: '2026-11-21T00:00Z' }]]) await assert.rejects(createBookingService({ rpc: async () => ({ data, error: null }) }).bookedPeriods('motor'));
   assert.deepEqual(await createBookingService({ rpc: async () => ({ data: [], error: null }) }).bookedPeriods('motor'), []);
 });
+
+
+test('admin notification links scope the server query to one booking before pagination', async () => {
+  const calls=[];
+  const query={select:()=>query,order:()=>query,eq:(...args)=>{calls.push(args);return query;},range:async()=>({data:[],error:null})};
+  await createBookingService({from:()=>query}).listAdmin(null,0,manilaToday(),'booking-id');
+  assert.deepEqual(calls,[['id','booking-id']]);
+});

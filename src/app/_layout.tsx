@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, useColorScheme, View } from 'react
 
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
+import { NotificationProvider } from '@/context/NotificationContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 
 function AppNavigator() {
@@ -37,7 +38,7 @@ function AppNavigator() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <NotificationProvider key={user ? `${user.id}:${user.role}` : 'guest'}><ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={!user} redirectTo="/dashboard">
           <Stack.Screen name="index" />
@@ -46,12 +47,13 @@ function AppNavigator() {
         </Stack.Protected>
         <Stack.Protected guard={!!user} redirectTo="/auth/login">
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="notifications" />
         </Stack.Protected>
         <Stack.Screen name="auth/forgot-password" />
         <Stack.Screen name="auth/reset-password" />
         <Stack.Screen name="auth/verify" />
       </Stack>
-    </ThemeProvider>
+    </ThemeProvider></NotificationProvider>
   );
 }
 

@@ -1,3 +1,4 @@
+import NotificationBell from '@/components/notification-bell';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
@@ -28,7 +29,7 @@ export default function HomeScreen() {
   return <MainSafe><ScrollView contentContainerStyle={styles.page} refreshControl={<RefreshControl refreshing={refreshing || bookingsLoading} onRefresh={() => { refresh(); refreshBookings(); }} tintColor="#21484a" />}>
     <View style={styles.header}>
       <View style={styles.greeting}><Text style={styles.brand}>MotorRent</Text><Text accessibilityRole="header" style={styles.hello}>Hello, {firstName}.</Text><Text style={styles.copy}>Where will you go today?</Text></View>
-      <Pressable onPress={() => router.navigate('/account')} accessibilityRole="button" accessibilityLabel="Open your account" style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}><Text style={styles.initial}>{user?.fullName.trim().charAt(0).toUpperCase() || 'M'}</Text></Pressable>
+      <View style={styles.headerActions}><NotificationBell /><Pressable onPress={() => router.navigate('/account')} accessibilityRole="button" accessibilityLabel="Open your account" style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}><Text style={styles.initial}>{user?.fullName.trim().charAt(0).toUpperCase() || 'M'}</Text></Pressable></View>
     </View>
     <View style={styles.section}>
       <View style={styles.sectionHeader}><Text accessibilityRole="header" style={styles.sectionTitle}>{nextBooking?.status === 'in_use' ? 'Your current ride' : 'Your next ride'}</Text><Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.textButton}><Text style={styles.link}>My bookings ↗</Text></Pressable></View>
@@ -63,6 +64,7 @@ export default function HomeScreen() {
   </ScrollView></MainSafe>;
 }
 const styles = StyleSheet.create({
+  headerActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   page: { padding: 24, paddingTop: 20, paddingBottom: 32, gap: 30, maxWidth: 720, width: '100%', alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 }, greeting: { flex: 1, gap: 6 }, brand: { fontSize: 13, color: '#526663', fontWeight: '600', marginBottom: 4 }, hello: { fontSize: 28, color: '#1d2928', fontWeight: '700', letterSpacing: -0.7 },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5ebe7', borderWidth: 1, borderColor: '#d6dfd9', alignItems: 'center', justifyContent: 'center' }, initial: { color: '#21484a', fontSize: 18, fontWeight: '600' },

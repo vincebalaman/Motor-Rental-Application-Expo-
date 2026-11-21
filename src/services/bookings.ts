@@ -136,8 +136,9 @@ export function createBookingService(client: SupabaseClient) {
       }
       return data.map(row => row.blocked_date);
     },
-    async listAdmin(status: AdminBookingView | null, offset = 0, operationsDate = manilaToday()): Promise<{ bookings: AdminBooking[]; hasMore: boolean }> {
+    async listAdmin(status: AdminBookingView | null, offset = 0, operationsDate = manilaToday(), bookingId?: string): Promise<{ bookings: AdminBooking[]; hasMore: boolean }> {
       let query = client.from('bookings').select('*').order('created_at', { ascending: false }).order('id', { ascending: false });
+      if (bookingId) query = query.eq('id', bookingId);
       if (status === 'pickups_today') query = query.eq('status', 'approved').eq('pickup_date', operationsDate);
       else if (status === 'returns_today') query = query.eq('status', 'in_use').eq('return_date', operationsDate);
       else if (status === 'overdue') query = query.eq('status', 'in_use').or(`scheduled_return_at.lte.${new Date().toISOString()},and(scheduled_return_at.is.null,return_date.lte.${operationsDate})`);
