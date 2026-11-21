@@ -1,3 +1,4 @@
+import { useLinkingURL } from 'expo-linking';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
@@ -7,11 +8,12 @@ import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
 import { getRecoveryClient } from '@/lib/supabase';
-import { createPasswordRecoveryService, parseRecoveryCallback, recoveryErrorMessage } from '@/services/password-recovery';
+import { createPasswordRecoveryService, parseRecoveryCallback, recoveryCallbackParams, recoveryCallbackDiagnostic, recoveryErrorMessage } from '@/services/password-recovery';
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ code?: string; sb_flow_id?: string; error?: string; error_code?: string; access_token?: string; refresh_token?: string }>();
-  const callbackKey = JSON.stringify(params);
+  const link = useLinkingURL();
+  const callbackKey = JSON.stringify(recoveryCallbackParams(params, link));
   const service = useMemo(() => createPasswordRecoveryService(getRecoveryClient()), []);
   const { logout } = useAuth();
   const [status, setStatus] = useState<'checking' | 'ready' | 'invalid' | 'saved'>('checking');
@@ -74,6 +76,7 @@ export default function ResetPasswordScreen() {
         </>}
         {status === 'saved' && <><Text style={styles.copy}>Your password was saved. Finish signing out before logging in with your new password.</Text><SubmitButton title="RETURN TO LOGIN" onPress={save} isSubmitting={busy} /></>}
         {error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+        {__DEV__ && status === 'invalid' && <Text selectable style={styles.copy}>{recoveryCallbackDiagnostic(JSON.parse(callbackKey))}</Text>}
         {status !== 'checking' && status !== 'saved' && <SubmitButton title="REQUEST A NEW LINK" onPress={requestAgain} isSubmitting={busy} />}
       </ScrollView>
     </KeyboardAvoidingView>
