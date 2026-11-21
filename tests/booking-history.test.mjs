@@ -1,7 +1,8 @@
+import './register-booking-imports.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bookingSection, bookingStatusText, bookingsInSection } from '../src/services/booking-history.ts';
-import { createBookingService } from '../src/services/bookings.ts';
+const { bookingSection, bookingStatusText, bookingsInSection } = await import('../src/services/booking-history.ts');
+const { createBookingService } = await import('../src/services/bookings.ts');
 const today = '2026-11-21';
 const booking = (changes = {}) => ({ id: 'b1', status: 'pending', pickup_date: '2026-11-22', return_date: '2026-11-24', created_at: '2026-11-20T10:00:00Z', updated_at: '2026-11-20T10:00:00Z', ...changes });
 test('upcoming includes pickup today and approved rental dates already underway', () => {
@@ -79,4 +80,19 @@ test('only confirmed completed state goes into completed history, even after ear
   assert.equal(bookingSection(completed, today), 'history');
   assert.equal(bookingStatusText(completed, today), 'Completed');
   assert.equal(bookingStatusText(booking({ status: 'approved', return_date: today }), today), 'Past · Approved');
+});
+
+test('no-show is separate history and never becomes the next ride', async()=>{
+  const {homeBooking,canMarkNoShow}=await import('../src/services/booking-history.ts');
+  const row=booking({status:'no_show',pickup_date:'2026-11-20'});
+  assert.equal(bookingSection(row,today),'history');
+  assert.equal(bookingStatusText(row,today),'No-show');
+  assert.equal(homeBooking([row],today),null);
+  assert.equal(canMarkNoShow(booking({status:'approved',pickup_date:'2026-11-20'}),today),true);
+  for(const invalid of [booking({status:'approved',pickup_date:today}),booking({status:'approved'}),booking({status:'in_use',pickup_date:'2026-11-20'}),booking({status:'approved',pickup_date:'2026-11-20',picked_up_at:'time'}),row]) assert.equal(canMarkNoShow(invalid,today),false);
+});
+
+test('mixed legacy and timed bookings sort by Philippine pickup instant across UTC date boundaries', () => {
+  const records = [booking({ id: 'timed', scheduled_pickup_at: '2026-11-21T16:30:00Z' }), booking({ id: 'legacy' })];
+  assert.deepEqual(bookingsInSection(records, 'upcoming', today, Date.parse('2026-11-21T00:00Z')).map(row => row.id), ['legacy','timed']);
 });

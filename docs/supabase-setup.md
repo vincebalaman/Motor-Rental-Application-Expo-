@@ -458,7 +458,7 @@ Device checks: cancel an approved future booking and one beginning today, verify
 reason and timestamp as the client, confirm dates become available, and refresh admin
 counts. Try blank/short reasons, retry a failed request, open the same booking on two
 admin devices, and race pickup against cancellation. In Use and Completed must never
-be cancellable. Check client pending cancellation still works. No-show handling remains a separate future change. Rejection reasons require the migration below.
+be cancellable. Check client pending cancellation still works. No-show handling and rejection reasons require the later migrations below.
 
 
 ## Client-visible rejection reasons
@@ -484,4 +484,86 @@ rental transitions are broadened. Explore files remain unchanged.
 Test short/blank/long reasons, successful rejection, client details after refresh,
 retry after a lost connection, already-approved requests, different admin decisions,
 and old rejected history. The server checks the status again before committing, so
-stale screens cannot overwrite a completed decision. No-show handling is still next.
+stale screens cannot overwrite a completed decision. No-show handling requires the migration below.
+
+
+## No-show handling
+
+Apply `supabase/migrations/20261121000600_booking_no_shows.sql` once after the rejection
+reasons migration. Existing statuses and history are preserved. No native dependency
+or environment variable is added, and Explore redesign files are unchanged.
+
+Admin Bookings → Approved offers Mark No-show only when the pickup date is strictly
+before today in Philippine time and no pickup was recorded. Enter a client-visible
+reason (5–500 normalized characters) and confirm the missed collection. The server
+checks role, current status, actual pickup, and server date again under the same row
+locks used for handover. Today/future pickups and pending/In Use/completed/cancelled/
+rejected requests cannot be marked No-show. Marking a pickup or no-show concurrently
+can produce only one valid transition.
+
+The booking becomes No-show, with server timestamp, admin ID, and immutable reason.
+Matching retries return the original record; a different reason cannot overwrite it.
+The booking is not Completed and has no fabricated pickup or return. Reserved dates
+are released by existing availability/conflict rules. The original rental dates, rate,
+and total stay as historical reference; no fee, refund, or payment is calculated.
+
+Admins have a No-show filter. Clients see No-show in History and can read the reason
+and recorded date in their own booking details. No-show requests no longer appear as
+the next approved ride on Home. Existing privacy and direct-write restrictions apply.
+
+Device checks: use an approved request whose pickup was yesterday, verify Mark No-show,
+enter a reason, confirm, and check client History/details and available calendar dates.
+Try a pickup today/future, a rental already In Use, repeated taps/retries, another
+client's detail URL, and simultaneous late pickup from another admin device. Existing
+approved requests should remain unchanged until the admin explicitly records a no-show.
+
+
+## Exact pickup times and completed-hour late charges
+
+Apply `supabase/migrations/20261121000700_timed_rentals.sql` once, after 006.
+Deploy the updated app with this migration: older versions cannot submit date-only
+requests after it is applied. Existing bookings are retained as date-only records;
+no exact time or hourly charge is invented for them.
+
+New requests choose a pickup date, a time in Asia/Manila, and 1–90 rental days.
+Each day is exactly 24 hours. The server derives the agreed return timestamp and
+base price, snapshots the daily motor rate and universal ₱200/hour late rate, and
+requires admin approval. The picker permits all clock times; business opening
+hours have not been configured. A late pickup does not shift the agreed return.
+
+`request_timed_motor_booking` accepts only the motor ID, pickup instant, number of
+days, and expected daily rate. Actor, approval, price, late rate, and return time
+are server controlled. Exact interval conflicts use exclusive return endpoints:
+a booking ending at 9 AM does not block one beginning at 9 AM. Unreturned overdue
+motors block subsequent approvals until physically returned. Pending requests
+reserve nothing. `motor_booked_periods` exposes only merged blocked intervals,
+without identities or references. Fully occupied calendar days are disabled;
+partially available days remain selectable, with full rental overlap validation.
+
+Admin pickup is allowed from the agreed pickup time until the scheduled return.
+No-show requires explicit admin confirmation and a reason after the agreed pickup
+instant; there is no automatic no-show or configured grace period. Legacy records
+keep their earlier calendar-day eligibility. Existing cancellation and rejection
+audits remain unchanged.
+
+On admin-confirmed return, the server records its current time and calculates:
+`late_hours = floor(max(actual_return - agreed_return, 0) / 1 hour)`.
+`late_fee_centavos = late_hours * 20000` and
+`final_total_centavos = total_centavos + late_fee_centavos`.
+The existing `total_centavos` always remains the base rental. No daily cap applies:
+all completed late hours use the agreed ₱200 rate. Under 1 hour adds ₱0;
+6 hours 10 minutes adds ₱1,200. Early return leaves the base charge unchanged.
+Matching return retries preserve the original actual time and charge. The admin
+sees an estimate before confirmation; the saved server result is final. Recording
+charges does not collect payment. Legacy bookings always have zero hourly fees.
+
+Run `npm test`, `npm run lint`, `npx tsc --noEmit`, and `npm run test:backend`.
+The PostgreSQL suite runs the old workflows first, applies 007 over existing
+records, then verifies exact schedules, boundaries, roles, privacy, charges,
+legacy returns, duplicate requests, and concurrent overlapping approvals.
+Device checks: select a time and duration, review the computed return, submit and
+approve; verify schedule in Home, My Bookings, details, and Admin Bookings. Record
+pickup and return, then check the stored breakdown on both accounts. Test Android
+and iPhone time selection, business date rollovers, adjacent bookings, expired
+pickup approval, and a legacy booking. Use development fixtures to exercise late
+returns without changing real client records.

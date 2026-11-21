@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BookingStatus } from './bookings';
 export type AdminBookingView = BookingStatus | 'pickups_today' | 'returns_today' | 'overdue';
-export const adminViewLabels: Record<AdminBookingView, string> = { pending: 'Pending', pickups_today: 'Pickups today', returns_today: 'Returns today', in_use: 'In use', overdue: 'Overdue', approved: 'Approved', completed: 'Completed', rejected: 'Rejected', cancelled: 'Cancelled' };
+export const adminViewLabels: Record<AdminBookingView, string> = { pending: 'Pending', pickups_today: 'Pickups today', returns_today: 'Returns today', in_use: 'In use', overdue: 'Overdue', approved: 'Approved', completed: 'Completed', rejected: 'Rejected', cancelled: 'Cancelled', no_show: 'No-show' };
 export function parseAdminView(value: unknown): AdminBookingView | null {
   return value === 'all' ? null : typeof value === 'string' && Object.hasOwn(adminViewLabels,value) ? value as AdminBookingView : 'pending';
 }

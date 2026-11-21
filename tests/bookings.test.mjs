@@ -1,6 +1,7 @@
+import './register-booking-imports.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bookingErrorMessage, createBookingService, manilaToday, rentalDays } from '../src/services/bookings.ts';
+const { bookingErrorMessage, createBookingService, manilaToday, rentalDays } = await import('../src/services/bookings.ts');
 test('Manila day changes at 16:00 UTC, independently of device timezone', () => {
   assert.equal(manilaToday(new Date('2026-11-20T15:59:59Z')), '2026-11-20');
   assert.equal(manilaToday(new Date('2026-11-20T16:00:00Z')), '2026-11-21');
@@ -16,11 +17,10 @@ test('rejects invalid dates, reversed ranges, past pickup and policy boundaries'
 test('request forwards expected price, never actor status or total', async () => {
   const calls = [];
   const service = createBookingService({ rpc: async (...args) => { calls.push(args); return { data: { id: 'booking' }, error: null }; } });
-  const today = manilaToday();
-  const end = new Date(Date.parse(today) + 86400000).toISOString().slice(0,10);
-  assert.equal((await service.request('motor', today, end, 12345)).id, 'booking');
-  assert.deepEqual(calls[0], ['request_motor_booking', { p_motor_id: 'motor', p_pickup_date: today, p_return_date: end, p_expected_rate: 12345 }]);
-  await assert.rejects(service.request('motor', today, end, 1.23));
+  const pickup = new Date(Math.floor(Date.now() / 60000) * 60000 + 86400000).toISOString();
+  assert.equal((await service.request('motor', pickup, 2, 12345)).id, 'booking');
+  assert.deepEqual(calls[0], ['request_timed_motor_booking', { p_motor_id: 'motor', p_pickup_at: pickup, p_rental_days: 2, p_expected_rate: 12345 }]);
+  await assert.rejects(service.request('motor', pickup, 2, 1.23));
   assert.equal(calls.length, 1);
 });
 test('cancellation uses guarded RPC rather than direct table writes', async () => {
@@ -141,4 +141,36 @@ test('rejection errors give a safe next step',async()=>{
   const {adminBookingErrorMessage}=await import('../src/services/bookings.ts');
   assert.match(adminBookingErrorMessage({message:'booking_rejection_reason_required'}),/5–500/);
   assert.match(adminBookingErrorMessage({message:'booking_rejection_conflict'}),/already rejected/);
+});
+
+test('no-show requires a normalized reason and confirmed audit fields',async()=>{
+  const {noShowReason}=await import('../src/services/bookings.ts');
+  assert.equal(noShowReason(' Client\n missed pickup '),'Client missed pickup');
+  for(const reason of ['', '    ', 'tiny','x'.repeat(501)]) assert.throws(()=>noShowReason(reason));
+  const calls=[];
+  const good={id:'b',status:'no_show',no_show_reason:'Client missed pickup',no_show_at:'time',picked_up_at:null,returned_at:null};
+  const service=createBookingService({rpc:async(name,args)=>{calls.push([name,args]);return {data:good,error:null};}});
+  await assert.rejects(service.markNoShow('b','bad'));
+  assert.equal(calls.length,0);
+  assert.equal((await service.markNoShow('b',' Client missed pickup ')).status,'no_show');
+  assert.deepEqual(calls,[['admin_mark_booking_no_show',{p_booking_id:'b',p_reason:'Client missed pickup'}]]);
+  for(const data of [null,{...good,id:'other'},{...good,status:'completed'},{...good,no_show_reason:'Different reason'},{...good,no_show_at:null},{...good,picked_up_at:'time'}]) await assert.rejects(createBookingService({rpc:async()=>({data,error:null})}).markNoShow('b','Client missed pickup'));
+});
+test('no-show errors explain eligibility and immutable decisions',async()=>{
+  const {adminBookingErrorMessage}=await import('../src/services/bookings.ts');
+  assert.match(adminBookingErrorMessage({message:'booking_no_show_too_early'}),/after the agreed pickup time/);
+  assert.match(adminBookingErrorMessage({message:'booking_no_show_not_eligible'}),/no pickup/);
+  assert.match(adminBookingErrorMessage({message:'booking_no_show_conflict'}),/already marked/);
+});
+
+
+test('timed request rejects missing or fractional-minute times before contacting the server', async () => {
+  let calls = 0;
+  const service = createBookingService({ rpc: async () => { calls++; return { data: { id: 'b' }, error: null }; } });
+  for (const pickup of ['bad', '', new Date(Math.floor(Date.now()/60000)*60000+86400001).toISOString()]) await assert.rejects(service.request('motor', pickup, 1, 10000));
+  assert.equal(calls, 0);
+});
+test('exact availability rejects an unconfirmed response instead of presenting an empty calendar', async () => {
+  for (const data of [null, [{ blocked_start: 'bad', blocked_end: 'bad' }], [{ blocked_start: '2026-11-21T01:00Z', blocked_end: '2026-11-21T00:00Z' }]]) await assert.rejects(createBookingService({ rpc: async () => ({ data, error: null }) }).bookedPeriods('motor'));
+  assert.deepEqual(await createBookingService({ rpc: async () => ({ data: [], error: null }) }).bookedPeriods('motor'), []);
 });

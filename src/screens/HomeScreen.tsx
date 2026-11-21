@@ -1,3 +1,5 @@
+import { useBookingClock } from '@/hooks/use-booking-clock';
+import { bookingScheduleLabel, bookingIsOverdue } from '@/services/booking-time';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { useBookings } from '@/context/BookingContext';
@@ -6,7 +8,6 @@ import CatalogCard, { dailyPrice } from '@/components/catalog-card';
 import BookingStatus from '@/components/booking-status';
 import { homeBooking } from '@/services/booking-history';
 import { manilaToday } from '@/services/bookings';
-import { formatBookingDate } from '@/services/booking-calendar';
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
@@ -14,12 +15,13 @@ import { useMotorInventory } from '@/context/MotorContext';
 import AdminHomeScreen from './AdminHomeScreen';
 
 export default function HomeScreen() {
+  const clock = useBookingClock();
   const { user } = useAuth();
   const { motors, loading, error, retry, refreshing, refresh, refreshError } = useMotorInventory();
   const { bookings, loading: bookingsLoading, error: bookingError, refresh: refreshBookings } = useBookings();
   useFocusEffect(useCallback(() => { refreshBookings(); }, [refreshBookings]));
-  const today = manilaToday();
-  const nextBooking = homeBooking(bookings, today);
+  const today = manilaToday(new Date(clock));
+  const nextBooking = homeBooking(bookings, today, clock);
   if (user?.role === 'admin') return <AdminHomeScreen />;
   return <MainSafe><ScrollView contentContainerStyle={styles.page} refreshControl={<RefreshControl refreshing={refreshing || bookingsLoading} onRefresh={() => { refresh(); refreshBookings(); }} tintColor="#21484a" />}>
     <View style={styles.header}><View style={styles.greeting}><Text style={styles.brand}>MOTORRENT</Text><Text style={styles.hello}>Hi, {user?.fullName.split(' ')[0] || 'there'}.</Text></View><Pressable onPress={() => router.navigate('/account')} accessibilityRole="button" accessibilityLabel="Open your account" style={styles.avatar}><Text style={styles.initial}>{user?.fullName.charAt(0).toUpperCase()}</Text></Pressable></View>
@@ -28,12 +30,12 @@ export default function HomeScreen() {
       <SubmitButton title="RETRY BOOKING STATUS" onPress={refreshBookings} />
       <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.linkButton}><Text style={styles.link}>My Bookings →</Text></Pressable>
     </View> : nextBooking ? <View style={styles.rideCard}>
-      <Text style={styles.rideEyebrow}>{nextBooking.status === 'in_use' ? 'YOUR CURRENT RIDE' : nextBooking.status === 'approved' ? nextBooking.pickup_date <= today ? 'YOUR SCHEDULED RIDE' : 'YOUR NEXT APPROVED RIDE' : 'YOUR LATEST REQUEST'}</Text>
-      <BookingStatus booking={nextBooking} today={today} />
+      <Text style={styles.rideEyebrow}>{nextBooking.status === 'in_use' ? 'YOUR CURRENT RIDE' : nextBooking.status === 'approved' ? (nextBooking.scheduled_pickup_at ? Date.parse(nextBooking.scheduled_pickup_at) <= clock : nextBooking.pickup_date <= today) ? 'YOUR SCHEDULED RIDE' : 'YOUR NEXT APPROVED RIDE' : 'YOUR LATEST REQUEST'}</Text>
+      <BookingStatus booking={nextBooking} today={today} now={clock} />
       <Text style={styles.rideTitle}>{nextBooking.motor_name}</Text>
-      <View style={styles.dates}><View style={styles.dateColumn}><Text style={styles.dateLabel}>PICKUP</Text><Text style={styles.dateValue}>{formatBookingDate(nextBooking.pickup_date)}</Text></View><Text style={styles.dateArrow}>→</Text><View style={styles.dateColumn}><Text style={styles.dateLabel}>RETURN</Text><Text style={styles.dateValue}>{formatBookingDate(nextBooking.return_date)}</Text></View></View>
-      <Text style={styles.rideTotal}>{dailyPrice(nextBooking.total_centavos / 100)} <Text style={styles.copy}>total rental</Text></Text>
-      <Text style={styles.copy}>{nextBooking.status === 'in_use' ? nextBooking.return_date <= today ? 'Your motor is overdue and still recorded as in use. Please contact the rental shop about its return.' : 'Pickup recorded. Enjoy your ride, and check the scheduled return date.' : nextBooking.status === 'pending' ? 'Waiting for admin approval. Your motor is not reserved yet.' : nextBooking.pickup_date <= today ? 'Your approved rental dates are underway. See the details for your schedule.' : 'Your request is approved. Your ride is reserved for these dates.'}</Text>
+      <View style={styles.dates}><View style={styles.dateColumn}><Text style={styles.dateLabel}>PICKUP</Text><Text style={styles.dateValue}>{bookingScheduleLabel(nextBooking, 'pickup')}</Text></View><Text style={styles.dateArrow}>→</Text><View style={styles.dateColumn}><Text style={styles.dateLabel}>RETURN</Text><Text style={styles.dateValue}>{bookingScheduleLabel(nextBooking, 'return')}</Text></View></View>
+      <Text style={styles.rideTotal}>{dailyPrice(nextBooking.total_centavos / 100)} <Text style={styles.copy}>base rental</Text></Text>
+      <Text style={styles.copy}>{nextBooking.status === 'in_use' ? bookingIsOverdue(nextBooking, today, clock) ? 'Your motor is overdue and still recorded as in use. Please contact the rental shop about its return.' : 'Pickup recorded. Enjoy your ride, and check the scheduled return time.' : nextBooking.status === 'pending' ? 'Waiting for admin approval. Your motor is not reserved yet.' : (nextBooking.scheduled_pickup_at ? Date.parse(nextBooking.scheduled_pickup_at) <= clock : nextBooking.pickup_date <= today) ? 'Your scheduled pickup time has arrived. See the details for your schedule.' : 'Your request is approved. Your ride is reserved for this schedule.'}</Text>
       {bookingsLoading && <Text accessibilityLiveRegion="polite" style={styles.copy}>Refreshing booking status…</Text>}
       <SubmitButton title="VIEW BOOKING DETAILS →" onPress={() => router.push({ pathname: '/bookings/[bookingId]', params: { bookingId: nextBooking.id } })} style={styles.rideButton} />
       <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.linkButton}><Text style={styles.link}>All my bookings →</Text></Pressable>

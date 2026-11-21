@@ -1,7 +1,8 @@
+import './register-booking-imports.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { addDays, canSelectCalendarDate, monthCells, rangeIsBlocked, selectCalendarDate, shiftMonth } from '../src/services/booking-calendar.ts';
-import { createBookingService } from '../src/services/bookings.ts';
+const { addDays, canSelectCalendarDate, monthCells, rangeIsBlocked, selectCalendarDate, shiftMonth } = await import('../src/services/booking-calendar.ts');
+const { createBookingService } = await import('../src/services/bookings.ts');
 const today = '2026-11-21';
 const empty = { pickup: '', returned: '' };
 test('calendar cells align weekdays, month boundaries and leap days', () => {
