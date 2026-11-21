@@ -89,3 +89,15 @@ test('admin errors explain conflicts without exposing arbitrary backend text', a
   assert.match(adminBookingErrorMessage({ message: 'booking_admin_required' }), /administrator/);
   assert.doesNotMatch(adminBookingErrorMessage(new Error('private internals')), /private internals/);
 });
+
+test('handover uses guarded RPC and requires confirmed lifecycle timestamps', async () => {
+  const calls = [];
+  const service = createBookingService({ rpc: async (name, args) => {
+    calls.push([name,args]);
+    return { data: { id: args.p_booking_id, status: args.p_action === 'pickup' ? 'in_use' : 'completed', picked_up_at: '2026-11-21T02:00:00Z', returned_at: args.p_action === 'return' ? '2026-11-21T03:00:00Z' : null }, error: null };
+  } });
+  assert.equal((await service.handover('b1','pickup')).status,'in_use');
+  assert.equal((await service.handover('b1','return')).status,'completed');
+  assert.deepEqual(calls, [['record_motor_handover',{ p_booking_id: 'b1', p_action: 'pickup' }], ['record_motor_handover',{ p_booking_id: 'b1', p_action: 'return' }]]);
+  for (const response of [null,{ id:'b1',status:'in_use' },{ id:'wrong',status:'in_use',picked_up_at:'time' }]) await assert.rejects(createBookingService({ rpc: async () => ({ data:response,error:null }) }).handover('b1','pickup'));
+});

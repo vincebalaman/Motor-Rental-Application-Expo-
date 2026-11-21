@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getSupabaseClient } from '@/lib/supabase';
 import { type Booking, bookingErrorMessage, createBookingService } from '@/services/bookings';
 
-type Value = { bookings: Booking[]; loading: boolean; error: string | null; refresh: () => void; request: (motorId: string, pickup: string, returned: string, rate: number) => Promise<Booking>; cancel: (id: string) => Promise<void> };
+type Value = { bookings: Booking[]; loading: boolean; error: string | null; refresh: () => void; request: (motorId: string, pickup: string, returned: string, rate: number) => Promise<Booking>; cancel: (id: string) => Promise<Booking> };
 const Context = createContext<Value | null>(null);
 export function BookingProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -38,7 +38,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     if (user?.role !== 'client') throw new Error('booking_client_required');
     const result = await service.request(motorId, pickup, returned, rate); merge(result); return result;
   };
-  const cancel = async (id: string) => { const result = await service.cancel(id); merge(result); };
+  const cancel = async (id: string) => { const result = await service.cancel(id); merge(result); return result; };
   return <Context.Provider value={{ bookings, loading, error, refresh, request, cancel }}>{children}</Context.Provider>;
 }
 export function useBookings() {

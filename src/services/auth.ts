@@ -1,6 +1,6 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 
-export type AuthUser = { id: string; fullName: string; email: string; role: 'client' | 'admin' };
+export type AuthUser = { id: string; fullName: string; phone: string | null; email: string; role: 'client' | 'admin' };
 
 export function withAuthTimeout<T>(operation: PromiseLike<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -45,7 +45,7 @@ export function createAuthService(client: SupabaseClient) {
       if (identityError) throw identityError;
       if (!identity.user || identity.user.id !== session.user.id) throw new Error('Your session changed. Please log in again.');
       const [{ data: profile, error: profileError }, { data: role, error: roleError }] = await Promise.all([
-        withAuthTimeout(client.from('profiles').select('full_name').eq('id', identity.user.id).single()),
+        withAuthTimeout(client.from('profiles').select('full_name,phone').eq('id', identity.user.id).single()),
         withAuthTimeout(client.from('user_roles').select('role').eq('user_id', identity.user.id).single()),
       ]);
       if (profileError) throw profileError;
@@ -53,7 +53,7 @@ export function createAuthService(client: SupabaseClient) {
       if (!profile || typeof profile.full_name !== 'string' || !role || !['client', 'admin'].includes(role.role)) {
         throw new Error('Account setup is incomplete. Please contact the rental shop.');
       }
-      return { id: identity.user.id, fullName: profile.full_name, email: identity.user.email ?? '', role: role.role };
+      return { id: identity.user.id, fullName: profile.full_name, phone: typeof profile.phone === 'string' ? profile.phone : null, email: identity.user.email ?? '', role: role.role };
     },
   };
 }

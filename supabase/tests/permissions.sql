@@ -27,9 +27,10 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001'
 select pg_temp.assert_true((select count(*) = 1 from public.profiles), 'client reads own profile only');
 select pg_temp.assert_true((select count(*) = 1 from public.user_roles), 'client reads own role only');
 select pg_temp.assert_true(not private.is_admin(), 'client has no admin privileges');
-update public.profiles set full_name = 'Updated Rider' where id = auth.uid();
+update public.profiles set full_name = 'Updated Rider', phone = '+639171234567' where id = auth.uid();
 select pg_temp.assert_true((select full_name = 'Updated Rider' from public.profiles where id = auth.uid()), 'client edits own profile');
-update public.profiles set full_name = 'Forbidden Change' where id = '00000000-0000-0000-0000-000000000002';
+select pg_temp.assert_true((select phone = '+639171234567' from public.profiles where id = auth.uid()), 'client edits own phone');
+update public.profiles set full_name = 'Forbidden Change', phone = '00000000000' where id = '00000000-0000-0000-0000-000000000002';
 do $$ begin
   update public.user_roles set role = 'admin' where user_id = auth.uid();
   raise exception 'Client unexpectedly changed role';
@@ -58,6 +59,8 @@ exception when insufficient_privilege then null; end $$;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',false);
 select pg_temp.assert_true(private.is_admin(), 'trusted role assignment enables admin');
 select pg_temp.assert_true((select count(*) = 3 from public.profiles), 'admin can read client profiles');
+select pg_temp.assert_true((select phone = '+639171234567' from public.profiles where id = '00000000-0000-0000-0000-000000000001'), 'admin sees updated client phone');
+select pg_temp.assert_true((select phone is null from public.profiles where id = '00000000-0000-0000-0000-000000000002'), 'client cannot alter another phone');
 select pg_temp.assert_true((select full_name = 'Other Rider' from public.profiles where id = '00000000-0000-0000-0000-000000000002'), 'other profile was not modified');
 select pg_temp.assert_true((select count(*) = 2 from public.motors), 'admin reads archived motors');
 insert into public.motors (name,type,description,daily_rate_centavos) values ('New Motor','Sport','New ride',250000);

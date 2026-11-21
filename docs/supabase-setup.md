@@ -113,8 +113,7 @@ perform this operation. Do not identify an admin by a hard-coded email or signup
   persisted sessions, and request deadlines. AuthContext owns token refresh and cleanup.
 
 The initial accounts/catalog migration does not include bookings. Apply the separate
-client-bookings migration below to enable the booking flow. Admin screens and
-archive/maintenance restrictions involving approved bookings follow separately.
+client-bookings migration below to enable the booking flow. Admin screens and rental safeguards use the later migrations described below.
 
 ## Remaining integration work
 
@@ -125,7 +124,7 @@ archive/maintenance restrictions involving approved bookings follow separately.
 4. Complete the shared inventory device checklist above and verify hosted storage
    signing with an uploaded image. Local SQL policies have already been tested.
 5. Apply the client booking migration below and complete the booking device checks.
-6. Complete the admin booking device checks below; add pickup/return and archive/maintenance restrictions.
+6. Apply the handover migration and complete the admin pickup/return device checks below.
    Approval transitions already check date conflicts and have simultaneous-request tests.
 
 Local accounts do not become cloud identities simply because the same email exists.
@@ -159,8 +158,8 @@ SQL Editor. This creates the bookings table, policies, and guarded RPC functions
 Do not rerun the earlier migrations. No new environment variables are needed.
 The publishable key cannot run this migration; apply it from the dashboard.
 
-One motor listing is one rentable unit. Dates are Philippine calendar dates, entered
-as YYYY-MM-DD. Return is exclusive: Nov 21 to Nov 23 costs two days. Pickup must be
+One motor listing is one rentable unit. Dates are Philippine calendar dates, selected
+from the booking calendar and stored as YYYY-MM-DD. Return is exclusive: Nov 21 to Nov 23 costs two days. Pickup must be
 between today and 365 days ahead; rental duration must be 1–90 days. These initial
 limits are enforced by both the service and database and can be revised together.
 
@@ -183,7 +182,7 @@ The client UI does not collect payment or confirm a pending request as reserved.
 Device checks after applying the migration:
 
 1. As a client, open Explore → motor details → Request Booking.
-2. Enter valid pickup/return dates. Check day count and total; submit. Verify Pending
+2. Pick valid pickup/return dates. Review the day count and total; confirm the request. Verify Pending
    in My Bookings, close/reopen the app, and verify the request remains.
 3. Try invalid dates, past pickup, and identical dates. They must fail. Submit the same
    active dates twice: there must be one active booking, not duplicate charges/requests.
@@ -197,7 +196,7 @@ Device checks after applying the migration:
 checks database permissions, price snapshots, cancellation, overlapping/adjacent
 ranges, concurrent duplicate submissions, and simultaneous overlapping approvals in
 an isolated PostgreSQL instance. Hosted migration application and the device checks
-remain manual; pickup/return and payment are separate work.
+remain manual; payment is separate work.
 
 
 ## Admin booking management
@@ -233,4 +232,166 @@ Device checks:
 7. Check an empty queue, a failed load, a retry, and more than 50 requests if available.
 
 The admin Home screen links to booking review, inventory, and account settings.
-Dashboard counts and pickup/return tracking can be added in the next step.
+Dashboard counts can be added separately. Pickup/return tracking requires the handover migration below.
+
+
+## Calendar booking UI
+
+After the client-bookings migration, apply
+`supabase/migrations/20261121000100_booking_calendar.sql` once in the SQL Editor.
+It adds `motor_blocked_dates`, an authenticated read-only RPC exposing only occupied
+calendar dates for an active motor. Client identities, booking IDs, pricing, and
+pending/rejected/cancelled requests are not exposed by this endpoint. The bounded
+455-day horizon covers the 365-day pickup horizon plus a 90-day rental and fits
+within the default API row limit. Existing bookings policies remain unchanged.
+
+The booking screen now uses a month calendar: tap pickup, then return. The range is
+highlighted and the day count/total update automatically. Past dates and occupied
+pickup days are disabled. The return date is exclusive, so returning on the first
+occupied day is allowed, while crossing that day is blocked. Clear Dates resets
+the range; tapping a date after completing a range starts a new pickup selection.
+The review step shows the motor photo, dates, daily rate, total, and approval notice
+before sending a request. The displayed rate is held for review and compared with
+both the latest local catalog and the server rate before submission.
+
+Availability reloads on screen focus, foreground, explicit retry, and failed submit.
+An unavailable calendar never implies that all dates are free: review/confirmation
+are disabled until availability is loaded. The server still checks availability on
+request and approval. This calendar does not reserve dates or collect payment.
+
+Device checks on Android and iPhone:
+
+- Navigate across months, select pickup and return, clear the range, and start again.
+- Check a month boundary, same-day taps, and the 90-day/365-day limits.
+- Confirm that dates occupied by an approved booking are unavailable. Pending requests
+  must not block dates. Return on the next approved booking's pickup date is allowed.
+- Review dates/rate/total, go back to edit, then submit; check the saved request in
+  My Bookings. A failed network call must never display a false success.
+- Change the motor rate or approve an overlapping request on a second device while
+  reviewing; confirmation must fail safely, refresh, and offer another selection.
+- Check screen-reader date labels, larger text, narrow screens, and loading/retry states.
+
+No additional native dependency or rebuild is required for the calendar itself.
+Automated tests cover month alignment/leap days, selection state, range conflicts,
+boundaries, RPC errors, availability privacy, and SQL permissions.
+
+
+## Client booking history and details
+
+My Bookings now has Upcoming and History views. Pending requests are Upcoming when
+pickup is today or later in Philippine time; approved requests remain Upcoming while
+the exclusive return date is still ahead, including scheduled dates already underway.
+Rejected/cancelled requests, elapsed pending pickups, and elapsed approved bookings
+appear in History. Past labels preserve the real decision (for example Past · Approved)
+and never assert that a motor was picked up, returned, or completed.
+
+Open a card to view `/bookings/[bookingId]`: saved motor name, dates, duration,
+snapshotted daily rate/total, status, reference, and timestamps. Photos come from the
+current accessible motor catalog and have a fallback when the listing is archived.
+The details read scopes both client identity and booking ID and remains protected by
+bookings RLS. A failed read shows retry rather than claiming the booking is absent.
+
+Cancellation has moved into the details screen. Only pending requests can be
+cancelled, with confirmation; cancellation is disabled while the record is being
+refreshed or could not be verified. The server-confirmed result updates both the
+record and shared booking list. A concurrent approval or uncertain response refreshes
+the details and reports the safe next step. Cancelled requests appear in History.
+
+No new migration or native dependency is required. Test both views and details on
+Android/iPhone, cancellation and its History placement, a stale request already
+approved by an admin, direct detail links after restarting, missing/other-account IDs,
+failed refresh/retry, and archived listings. Check the return-day boundary in
+Philippine time and confirm Past is not shown as Completed.
+
+## Client Home booking card
+
+Home prioritizes the nearest approved booking with a return date still ahead in
+Philippine time, including approved rental dates already underway. If none exists,
+it shows the most recently created pending request whose pickup date has not passed.
+Rejected, cancelled, elapsed pending, and past approved records do not become the
+next ride. An account with neither eligible status sees Browse Motors.
+
+The card uses the saved motor name/dates/total and links directly to booking details.
+Pending copy explicitly says that the motor is not reserved. Home refreshes bookings
+on focus and pull-to-refresh; BookingProvider also refreshes on foreground. Loading
+and errors do not imply that the client has no bookings. Admin Home is unaffected.
+No new migration is needed. Test approval priority, nearest approved dates, latest
+eligible pending fallback, cancellation/approval on another device, no upcoming
+requests, and the exclusive return-day boundary.
+
+## Profile editing
+
+Account → Edit Profile updates `profiles.full_name` and `profiles.phone`. Name is
+required (2–120 characters); phone is optional and accepts 7–15 digits with an
+optional leading plus. Spaces, parentheses, dots, and hyphens are removed before
+saving; leading zeros are retained. A blank phone stores NULL. The form does not
+verify phone ownership. Email and role are not part of the editable payload.
+
+The service validates the current Auth identity, scopes the update to that user's
+profile ID, and requires a returned row before displaying success. Existing column
+grants and RLS prevent editing another profile, account identity, or role. A confirmed
+save updates AuthContext immediately; older in-flight profile hydration cannot replace
+that newly saved name/phone. Draft values remain available on failed/uncertain saves.
+The app keeps password/session work out of the profile-editing flow.
+
+No migration or native dependency is needed. Device checks: change name and phone,
+verify Home's name, reopen the app to verify persistence, remove the optional phone,
+try invalid values, cancel editing, and retry after a failed connection. On an admin
+account/device, refresh booking details and verify that the client's updated name and
+phone appear. Backend tests exercise own-profile writes and admin read visibility.
+
+
+## Admin pickup and return tracking
+
+Run `supabase/migrations/20261121000200_rental_handover.sql` once in the development
+SQL Editor, after all existing migrations. Existing requests retain their status.
+The migration adds In Use and Completed, actual pickup/return timestamps and admin
+IDs, guarded handover RPC, reservation safeguards, and updated availability checks.
+No new native dependency or environment variable is required.
+
+Admin Bookings → Approved → Record Pickup → Confirm Pickup records actual handover.
+Pickup is allowed only on/after pickup and before the exclusive return day in
+Philippine time; it requires an approved request, a usable motor, and no other active
+handover. Future pickups and already elapsed approved dates cannot be marked picked
+up. Pending, rejected, cancelled, and completed requests cannot be handed over.
+
+In Use → Record Return → Confirm Return records physical return and moves the rental
+to Completed. Early and late returns are supported. Original rental dates, rate, and
+total remain unchanged; the app does not calculate late fees, refunds, or payment.
+Never mark a return until the motor is actually back. Both handover operations are
+retry-safe and serialize on the motor row; only one rental per motor can be In Use.
+Audit times are recorded after acquiring locks, using the server clock.
+
+An unreturned motor stays In Use even after its scheduled dates expire. From its
+exclusive return day it is labelled Overdue. An overdue motor blocks new requests,
+approvals, and the full available calendar horizon until actual return is recorded.
+A motor still In Use cannot be handed to the next client even if their nominal dates
+are adjacent. Future bookings beyond an active rental's scheduled return may still
+be requested/approved before it is overdue; their pickup still requires actual return.
+
+Archiving or placing a motor under maintenance is rejected while it has an In Use
+rental or an approved booking whose return date is still ahead. Editing listing text
+or daily rates is allowed and does not alter saved booking prices.
+
+Clients see actual handover times in booking details. In Use remains in Upcoming,
+including overdue rentals, and takes priority on Home. Completed appears in History.
+Approved dates that elapsed without handover remain Past · Approved, never Completed.
+Existing cancelled/rejected/pending cancellation permissions do not change.
+
+Device acceptance checks:
+
+1. As admin, approve a request beginning today, confirm pickup, and verify In Use and
+   actual pickup time in both admin and client views after refresh.
+2. Confirm return and verify Completed, both timestamps, and unchanged total in History.
+3. Try early pickup, return before pickup, client handover calls, repeated actions,
+   and stale decisions from another device; unsupported transitions must fail safely.
+4. Check an overdue rental: it remains In Use/visible on Home and blocks new handovers
+   until returned. Past uncollected approved requests must remain uncompleted.
+5. Try archiving/maintenance on a reserved motor. The app must explain the restriction.
+6. Verify original calendar overlap checks and pending cancellation still work.
+
+`npm test` covers service handover confirmation and client classification.
+`npm run test:backend` also verifies admin-only transitions, timestamp/actor audit,
+retry behavior, unchanged totals, overdue calendar/request/approval blocking,
+archival restrictions, and simultaneous pickup/return retries in local PostgreSQL.
+Hosted migration application and actual-device checks still require manual testing.
