@@ -1,3 +1,4 @@
+import type { AdminBookingView } from './admin-dashboard';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type BookingStatus = 'pending' | 'approved' | 'in_use' | 'completed' | 'rejected' | 'cancelled';
@@ -83,9 +84,12 @@ export function createBookingService(client: SupabaseClient) {
       }
       return data.map(row => row.blocked_date);
     },
-    async listAdmin(status: BookingStatus | null, offset = 0): Promise<{ bookings: AdminBooking[]; hasMore: boolean }> {
+    async listAdmin(status: AdminBookingView | null, offset = 0, operationsDate = manilaToday()): Promise<{ bookings: AdminBooking[]; hasMore: boolean }> {
       let query = client.from('bookings').select('*').order('created_at', { ascending: false }).order('id', { ascending: false });
-      if (status) query = query.eq('status', status);
+      if (status === 'pickups_today') query = query.eq('status', 'approved').eq('pickup_date', operationsDate);
+      else if (status === 'returns_today') query = query.eq('status', 'in_use').eq('return_date', operationsDate);
+      else if (status === 'overdue') query = query.eq('status', 'in_use').lte('return_date', operationsDate);
+      else if (status) query = query.eq('status', status);
       const { data, error } = await query.range(offset, offset + ADMIN_BOOKING_PAGE_SIZE - 1);
       if (error) throw error;
       const rows: Booking[] = data ?? [];

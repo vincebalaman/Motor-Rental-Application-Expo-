@@ -232,7 +232,7 @@ Device checks:
 7. Check an empty queue, a failed load, a retry, and more than 50 requests if available.
 
 The admin Home screen links to booking review, inventory, and account settings.
-Dashboard counts can be added separately. Pickup/return tracking requires the handover migration below.
+Dashboard counts require the operations-dashboard migration below. Pickup/return tracking requires the handover migration below.
 
 
 ## Calendar booking UI
@@ -395,3 +395,36 @@ Device acceptance checks:
 retry behavior, unchanged totals, overdue calendar/request/approval blocking,
 archival restrictions, and simultaneous pickup/return retries in local PostgreSQL.
 Hosted migration application and actual-device checks still require manual testing.
+
+## Admin operations dashboard
+
+Apply `supabase/migrations/20261121000300_admin_dashboard.sql` once after the handover
+migration. Its admin-only `admin_booking_summary` RPC computes a single summary over
+all bookings, including records beyond list pagination limits. It returns the server's
+Philippine date and five counts. Guests and clients cannot execute it successfully.
+
+- Pending: all requests still awaiting review, including elapsed requests to reject.
+- Pickups today: Approved requests with pickup equal to the summary date, not pickups
+  already recorded as In Use.
+- Returns due today: In Use rentals with scheduled return equal to the summary date,
+  excluding Completed rentals and approved requests that were never collected.
+- Currently in use: all motors still with clients, including overdue rentals.
+- Overdue: In Use rentals whose exclusive return date has been reached, including today.
+
+Cards open matching server-filtered, paginated admin booking lists. The summary's date
+is passed to the operations queue so its predicates match the counts. Switching chips
+updates route parameters so subsequent dashboard navigation restores the requested
+filter. If viewing an older summary date, the list shows that operations date explicitly.
+Counts may change between opening Home and the list when another user acts.
+
+Home refreshes on focus, foreground, and pull-to-refresh. It shows loading, retry,
+last-loaded counts after a refresh failure, and an update time. Failed or absent
+summaries are never presented as zero counts. These are refresh-based summaries,
+not a realtime subscription. No new native dependency or environment variable is needed.
+
+Check the dashboard with an empty dataset and with pending/approved/In Use records.
+Open every card, change list filters, return Home, and open the same card again.
+Record pickup/return on another device, refresh Home, and verify remaining-task counts
+change. Verify the overdue/return-day boundary, failed load/retry, and client route access.
+SQL tests cover admin permissions, zero values, more than 1000 pending rows, server date,
+all five predicates, and a recorded return removing due/In Use/overdue task counts.
