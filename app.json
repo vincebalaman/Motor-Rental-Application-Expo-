@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Motor-Rental-Expo",
+    "name": "MotorRent",
     "slug": "Motor-Rental-Expo",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,7 +12,9 @@
     },
     "android": {
       "predictiveBackGestureEnabled": false,
-      "icon": "./assets/images/motorrent-app-icon.png"
+      "icon": "./assets/images/motorrent-app-icon.png",
+      "package": "com.motorrent.app",
+      "versionCode": 1
     },
     "web": {
       "output": "static",
@@ -51,6 +53,21 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "headers": {
+          "Cross-Origin-Embedder-Policy": "credentialless",
+          "Cross-Origin-Opener-Policy": "same-origin"
+        },
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "374afac1-aa8a-4da3-8067-7c48c2c6de55"
+      }
+    },
+    "owner": "timjoseph"
   }
 }
