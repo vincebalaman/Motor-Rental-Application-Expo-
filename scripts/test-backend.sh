@@ -21,12 +21,18 @@ trap cleanup EXIT INT TERM
   -f supabase/migrations/20261121000100_booking_calendar.sql \
   -f supabase/migrations/20261121000200_rental_handover.sql \
   -f supabase/migrations/20261121000300_admin_dashboard.sql \
+  -f supabase/migrations/20261121000400_admin_booking_cancellation.sql \
+  -f supabase/migrations/20261121000500_booking_rejection_reasons.sql \
+  -f supabase/migrations/20261121000600_booking_no_shows.sql \
   -f supabase/tests/permissions.sql \
   -f supabase/tests/local-import.sql \
   -f supabase/tests/bookings.sql \
   -f supabase/tests/booking-calendar.sql \
   -f supabase/tests/rental-handover.sql \
-  -f supabase/tests/admin-dashboard.sql >"$TEST_ROOT/results.log" 2>&1 || {
+  -f supabase/tests/admin-dashboard.sql \
+  -f supabase/tests/admin-cancellation.sql \
+  -f supabase/tests/rejection-reasons.sql \
+  -f supabase/tests/no-shows.sql >"$TEST_ROOT/results.log" 2>&1 || {
     cat "$TEST_ROOT/results.log"
     exit 1
   }
@@ -67,5 +73,48 @@ for HANDOVER_ACTION in pickup return; do
   wait "$SECOND_PID"
 done
 booking_sql -f supabase/tests/handover-concurrent-check.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/tests/cancellation-race-setup.sql >>"$TEST_ROOT/results.log"
+booking_sql -v race_action=cancel -f supabase/tests/cancellation-race.sql >"$TEST_ROOT/cancellation-race-cancel.log" 2>&1 &
+FIRST_PID=$!
+booking_sql -v race_action=pickup -f supabase/tests/cancellation-race.sql >"$TEST_ROOT/cancellation-race-pickup.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
+booking_sql -f supabase/tests/cancellation-race-check.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/tests/no-show-race-setup.sql >>"$TEST_ROOT/results.log"
+booking_sql -v race_action=no_show -f supabase/tests/no-show-race.sql >"$TEST_ROOT/no-show-race-decision.log" 2>&1 &
+FIRST_PID=$!
+booking_sql -v race_action=pickup -f supabase/tests/no-show-race.sql >"$TEST_ROOT/no-show-race-pickup.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
+booking_sql -f supabase/tests/no-show-race-check.sql >>"$TEST_ROOT/results.log"
+# Verify the upgrade against the existing date-only concurrency fixtures first.
+booking_sql -f supabase/migrations/20261121000700_timed_rentals.sql -f supabase/tests/timed-rentals.sql >>"$TEST_ROOT/results.log" 2>&1 || {
+  tail -60 "$TEST_ROOT/results.log"
+  exit 1
+}
+booking_sql -f supabase/tests/timed-concurrent-setup.sql >>"$TEST_ROOT/results.log"
+booking_sql -v booking_actor=00000000-0000-0000-0000-000000000001 -f supabase/tests/timed-concurrent-request.sql >"$TEST_ROOT/timed-request-1.log" 2>&1 &
+FIRST_PID=$!
+booking_sql -v booking_actor=00000000-0000-0000-0000-000000000001 -f supabase/tests/timed-concurrent-request.sql >"$TEST_ROOT/timed-request-2.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
+booking_sql -v booking_actor=00000000-0000-0000-0000-000000000002 -f supabase/tests/timed-concurrent-request.sql >>"$TEST_ROOT/results.log"
+booking_sql -v booking_actor=00000000-0000-0000-0000-000000000001 -f supabase/tests/timed-concurrent-review.sql >"$TEST_ROOT/timed-approval-1.log" 2>&1 &
+FIRST_PID=$!
+booking_sql -v booking_actor=00000000-0000-0000-0000-000000000002 -f supabase/tests/timed-concurrent-review.sql >"$TEST_ROOT/timed-approval-2.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
+booking_sql -f supabase/tests/timed-concurrent-check.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/tests/timed-return-setup.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/tests/timed-return-concurrent.sql >"$TEST_ROOT/timed-return-1.log" 2>&1 &
+FIRST_PID=$!
+booking_sql -f supabase/tests/timed-return-concurrent.sql >"$TEST_ROOT/timed-return-2.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
 tail -5 "$TEST_ROOT/results.log"
 echo "Local PostgreSQL test logs: $TEST_ROOT"
