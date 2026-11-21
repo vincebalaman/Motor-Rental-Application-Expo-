@@ -3,11 +3,9 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
-import { useAuth } from '@/context/AuthContext';
 import { useMotorInventory } from '@/context/MotorContext';
 
 function InventoryNavigator() {
-  const { user } = useAuth();
   const { loading, error, retry } = useMotorInventory();
   if (loading || error) {
     return (
@@ -27,7 +25,8 @@ function InventoryNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="[id]" />
-      <Stack.Protected guard={user?.role === 'admin'} redirectTo="/explore">
+      {/* Legacy import is retired; keep its code for recovery without exposing the route. */}
+      <Stack.Protected guard={false} redirectTo="/explore">
         <Stack.Screen name="import" />
       </Stack.Protected>
     </Stack>
