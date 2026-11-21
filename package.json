@@ -51,7 +51,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "node --test tests/*.test.mjs",
-    "test:backend": "sh scripts/test-backend.sh"
+    "test:backend": "sh scripts/test-backend.sh",
+    "build:apk": "npx --yes eas-cli@latest build --platform android --profile preview"
   },
   "private": true
 }
