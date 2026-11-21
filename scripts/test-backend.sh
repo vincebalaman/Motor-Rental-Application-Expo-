@@ -128,5 +128,9 @@ SECOND_PID=$!
 wait "$FIRST_PID"
 wait "$SECOND_PID"
 booking_sql -f supabase/tests/notification-concurrent-check.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/migrations/20261121000900_profile_photos.sql -f supabase/tests/profile-photos.sql >>"$TEST_ROOT/results.log" 2>&1 || {
+  tail -80 "$TEST_ROOT/results.log"
+  exit 1
+}
 tail -5 "$TEST_ROOT/results.log"
 echo "Local PostgreSQL test logs: $TEST_ROOT"

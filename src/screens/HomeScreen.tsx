@@ -1,3 +1,4 @@
+import ProfileAvatar from '@/components/profile-avatar';
 import NotificationBell from '@/components/notification-bell';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
@@ -29,7 +30,7 @@ export default function HomeScreen() {
   return <MainSafe><ScrollView contentContainerStyle={styles.page} refreshControl={<RefreshControl refreshing={refreshing || bookingsLoading} onRefresh={() => { refresh(); refreshBookings(); }} tintColor="#21484a" />}>
     <View style={styles.header}>
       <View style={styles.greeting}><Text style={styles.brand}>MotorRent</Text><Text accessibilityRole="header" style={styles.hello}>Hello, {firstName}.</Text><Text style={styles.copy}>Where will you go today?</Text></View>
-      <View style={styles.headerActions}><NotificationBell /><Pressable onPress={() => router.navigate('/account')} accessibilityRole="button" accessibilityLabel="Open your account" style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}><Text style={styles.initial}>{user?.fullName.trim().charAt(0).toUpperCase() || 'M'}</Text></Pressable></View>
+      <View style={styles.headerActions}><NotificationBell /><Pressable onPress={() => router.navigate('/account')} accessibilityRole="button" accessibilityLabel="Open your account" style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}><ProfileAvatar /></Pressable></View>
     </View>
     <View style={styles.section}>
       <View style={styles.sectionHeader}><Text accessibilityRole="header" style={styles.sectionTitle}>{nextBooking?.status === 'in_use' ? 'Your current ride' : 'Your next ride'}</Text><Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.textButton}><Text style={styles.link}>My bookings ↗</Text></Pressable></View>

@@ -1,3 +1,4 @@
+import ProfileAvatar from '@/components/profile-avatar';
 import NotificationBell from '@/components/notification-bell';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -41,7 +42,7 @@ export default function AdminHomeScreen() {
     return () => { focused.current = false; subscription.remove(); };
   }, [refresh]));
   return <MainSafe><ScrollView contentContainerStyle={styles.page} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => { void refresh(); }} tintColor="#21484a" />}>
-    <View style={styles.header}><View style={styles.headerCopy}><Text style={styles.eyebrow}>Admin overview</Text><Text accessibilityRole="header" style={styles.title}>Dashboard</Text><Text style={styles.copy}>Hello, {user?.fullName.trim().split(/\s+/)[0] || 'there'}.</Text></View><View style={styles.headerActions}><NotificationBell /><Pressable accessibilityRole="button" accessibilityLabel="Open admin account settings" onPress={() => router.navigate('/account')} style={styles.avatar}><Text style={styles.avatarText}>{user?.fullName.trim().charAt(0).toUpperCase() || 'A'}</Text></Pressable></View></View>
+    <View style={styles.header}><View style={styles.headerCopy}><Text style={styles.eyebrow}>Admin overview</Text><Text accessibilityRole="header" style={styles.title}>Dashboard</Text><Text style={styles.copy}>Hello, {user?.fullName.trim().split(/\s+/)[0] || 'there'}.</Text></View><View style={styles.headerActions}><NotificationBell /><Pressable accessibilityRole="button" accessibilityLabel="Open admin account settings" onPress={() => router.navigate('/account')} style={styles.avatar}><ProfileAvatar /></Pressable></View></View>
     {summary && <View style={styles.dateRow}><Text style={styles.date}>{formatBookingDate(summary.today, true)} · PH</Text><Text style={styles.updated}>{loading ? 'Refreshing…' : error ? 'Last loaded counts' : updatedAt ? `Updated ${updatedAt.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' })}` : ''}</Text></View>}
     {error && <View style={styles.errorPanel}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Pressable accessibilityRole="button" onPress={() => { void refresh(); }} style={styles.outlineButton}><Text style={styles.link}>Try again</Text></Pressable></View>}
     {loading && !summary && <View style={styles.status}><ActivityIndicator color="#21484a" accessibilityLabel="Loading admin dashboard" /><Text style={styles.copy}>Checking your booking activity…</Text></View>}

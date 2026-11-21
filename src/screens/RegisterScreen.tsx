@@ -1,6 +1,7 @@
 import { Link, router } from "expo-router";
 import { type ComponentRef, useRef, useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -116,9 +117,7 @@ export default function RegisterScreen() {
           </Pressable>
 
           <View style={styles.brandRow}>
-            <View style={styles.logoBadge}>
-              <Text style={styles.logoMark}>MR</Text>
-            </View>
+            <Image source={require('../../assets/images/motorrent-logo.png')} accessibilityLabel="MotorRent logo" resizeMode="contain" style={styles.logoBadge} />
             <View>
               <Text style={styles.brandName}>MOTOR RENTAL</Text>
               <Text style={styles.brandTagline}>YOUR NEXT RIDE STARTS HERE</Text>
@@ -311,19 +310,7 @@ const styles = StyleSheet.create({
   logoBadge: {
     width: 52,
     height: 52,
-    borderRadius: 26,
-    backgroundColor: "#21484a",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 3,
-    borderColor: "#c39b63",
     marginRight: 12,
-  },
-  logoMark: {
-    color: "#f7f2e8",
-    fontSize: 17,
-    fontWeight: "900",
-    letterSpacing: 1,
   },
   brandName: {
     color: "#21484a",

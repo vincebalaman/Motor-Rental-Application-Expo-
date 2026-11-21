@@ -650,3 +650,24 @@ photo. On web, use Choose a photo (the browser picker opens directly from the cl
 Device checks: create with a gallery photo, cancel a selection, take a camera photo,
 deny camera permission, undo an Edit selection, save a replacement, and confirm the
 new image as a client. Check a failed upload leaves the existing listing intact.
+
+## Profile pictures
+
+Apply `supabase/migrations/20261121000900_profile_photos.sql` in the Supabase SQL
+Editor before testing profile pictures. It creates a private `profile-images`
+bucket and a separate `profile_photos` table, so photo setup does not block login
+or change the existing profile/name/phone schema. Both clients and admins can use
+Account → Choose profile photo, preview a gallery/camera image, then Save profile
+photo or Cancel. Images are resized to JPEG using the existing photo tools.
+
+Each account can read and update only its own reference and storage folder, even
+when that account is an admin. The saved reference syncs across devices. Signed
+image URLs are refreshed when returning to the foreground and every 45 active
+minutes. Initials remain the fallback if a photo cannot display. Failed uploads
+do not change the saved reference. Retrying a selected photo reuses its unique
+path; old photos are retained to avoid deleting files after uncertain writes.
+
+Checks: `npm test`, `npx tsc --noEmit`, ESLint, platform exports, and the isolated
+`npm run test:backend` suite include owner/other-client/admin privacy checks.
+Device check with two accounts: save a picture, reopen Account and log in on a
+second device; verify persistence, replace/cancel, and test an upload offline.

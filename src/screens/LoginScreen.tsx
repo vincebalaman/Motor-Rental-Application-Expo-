@@ -1,6 +1,6 @@
 import { Link, useLocalSearchParams } from 'expo-router';
 import { type ComponentRef, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import Input from '@/components/input';
 import MainSafe from '@/components/mainsafe';
@@ -52,6 +52,7 @@ export default function LoginScreen() {
     <MainSafe>
       <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          <Image source={require('../../assets/images/motorrent-logo.png')} accessibilityLabel="MotorRent logo" resizeMode="contain" style={styles.logo} />
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Log in to your account to continue</Text>
 
@@ -120,6 +121,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
+  logo: { width: 88, height: 88, marginBottom: 20, alignSelf: 'center' },
   error: { color: '#991b1b', fontSize: 14, lineHeight: 21 },
   success: { color: '#21484a', fontSize: 14, lineHeight: 21, marginBottom: 16 },
   container: {

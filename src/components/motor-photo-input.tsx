@@ -4,9 +4,9 @@ import { MotorFormButton, motorFormStyles as styles } from '@/components/motor-f
 import { pickMotorPhoto } from '@/services/motor-photo-picker';
 import { photoBytes, type MotorPhoto } from '@/services/motor-photos';
 
-export function MotorPhotoInput({ photo, currentUrl, onChange, disabled, onBusyChange }: {
+export function MotorPhotoInput({ photo, currentUrl, onChange, disabled, onBusyChange, profile = false }: {
   photo: MotorPhoto | null; currentUrl?: string; onChange: (photo: MotorPhoto | null) => void;
-  disabled: boolean; onBusyChange: (busy: boolean) => void;
+  profile?: boolean; disabled: boolean; onBusyChange: (busy: boolean) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,11 +37,11 @@ export function MotorPhotoInput({ photo, currentUrl, onChange, disabled, onBusyC
   };
   const uri = photo?.uri || currentUrl;
   return <View style={{ gap: 12 }}>
-    {uri ? <Image source={{ uri }} accessibilityLabel="Motor photo preview" style={{ width: '100%', aspectRatio: 1.5, borderRadius: 12, backgroundColor: '#eef1eb' }} resizeMode="cover" /> : <View style={{ padding: 32, borderRadius: 12, backgroundColor: '#eef1eb' }}><Text style={styles.subtitle}>Add a clear photo of this motor.</Text></View>}
+    {uri ? <Image source={{ uri }} accessibilityLabel={profile ? "Profile photo preview" : "Motor photo preview"} style={{ width: '100%', aspectRatio: profile ? 1 : 1.5, maxWidth: profile ? 180 : undefined, alignSelf: 'center', borderRadius: profile ? 90 : 12, backgroundColor: '#eef1eb' }} resizeMode="cover" /> : <View style={{ padding: 32, borderRadius: 12, backgroundColor: '#eef1eb' }}><Text style={styles.subtitle}>{profile ? 'Choose a photo for your profile.' : 'Add a clear photo of this motor.'}</Text></View>}
     <MotorFormButton title={uri ? 'Choose another photo' : 'Choose a photo'} tone="outline" busy={disabled || busy} onPress={() => void choose(false)} />
     {Platform.OS !== 'web' && <MotorFormButton title="Take a photo" tone="outline" busy={disabled || busy} onPress={() => void choose(true)} />}
     {photo && <MotorFormButton title={currentUrl ? 'Keep current photo' : 'Remove selection'} tone="outline" busy={disabled || busy} onPress={() => onChange(null)} />}
-    <Text style={styles.hint}>{busy ? 'Preparing your photo…' : photo ? 'New photo selected. It will upload when you save.' : 'One photo per motor. Photos are resized automatically.'}</Text>
+    <Text style={styles.hint}>{busy ? 'Preparing your photo…' : photo ? 'New photo selected. It will upload when you save.' : profile ? 'Your photo is private to your account.' : 'One photo per motor. Photos are resized automatically.'}</Text>
     {error && <Text accessibilityRole="alert" style={styles.saveError}>{error}</Text>}
   </View>;
 }

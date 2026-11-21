@@ -3,6 +3,7 @@ import { type ComponentRef, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
+import ProfilePhoto from '@/components/profile-photo';
 import ProfileEditor from '@/components/profile-editor';
 import { useNotifications } from '@/context/NotificationContext';
 import { useAuth } from '@/context/AuthContext';
@@ -21,19 +22,20 @@ export default function AccountScreen() {
   const { user, loading, logout } = useAuth();
   const [editing, setEditing] = useState(false);
   const [profileBusy, setProfileBusy] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const leaving = useRef(false);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const editorScrolled = useRef(false);
-  const disabled = profileBusy || loggingOut;
+  const disabled = profileBusy || photoBusy || loggingOut;
   const editProfile = () => {
     if (disabled) return;
     editorScrolled.current = false; setEditing(true); setSaved(false); setLogoutError(null);
   };
   const handleLogout = async () => {
-    if (leaving.current || profileBusy) return;
+    if (leaving.current || profileBusy || photoBusy) return;
     leaving.current = true; setLoggingOut(true); setLogoutError(null);
     try { await logout(); }
     catch { setLogoutError('We could not sign you out. Check your connection and try again.'); }
@@ -49,7 +51,8 @@ export default function AccountScreen() {
         <View style={styles.header}><Text accessibilityRole="header" style={styles.title}>Account</Text><Text style={styles.subtitle}>Manage your details and security.</Text></View>
 
         <View style={styles.profileCard}>
-          <View style={styles.identity}><View style={styles.avatar}><Text style={styles.avatarText}>{initials || '?'}</Text></View><View style={styles.rowCopy}><Text style={styles.name}>{user.fullName}</Text><Text selectable style={styles.profileEmail}>{user.email}</Text></View></View>
+          <View style={styles.identity}><View style={styles.rowCopy}><Text style={styles.name}>{user.fullName}</Text><Text selectable style={styles.profileEmail}>{user.email}</Text></View></View>
+          <ProfilePhoto key={user.id} userId={user.id} initials={initials || '?'} disabled={profileBusy || loggingOut} onBusy={setPhotoBusy} />
           <View style={styles.profileActions}><View style={styles.roleBadge}><Text style={styles.roleText}>{user.role === 'admin' ? 'Administrator' : 'Client'}</Text></View>
           <Pressable accessibilityRole="button" accessibilityLabel="Edit your name and phone number" accessibilityState={{ disabled: disabled || editing }} disabled={disabled || editing} onPress={editProfile} style={({ pressed }) => [styles.editButton, pressed && styles.pressed, (disabled || editing) && styles.disabled]}><Text style={styles.editText}>{editing ? 'Editing your profile' : 'Edit profile'} <Text accessibilityElementsHidden>↗</Text></Text></Pressable></View>
         </View>
