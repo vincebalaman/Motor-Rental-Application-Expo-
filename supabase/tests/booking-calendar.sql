@@ -23,6 +23,7 @@ select pg_temp.calendar_assert(not exists(select 1 from public.motor_blocked_dat
 select pg_temp.calendar_assert((select max(blocked_date)=(now() at time zone 'Asia/Manila')::date+454 from public.motor_blocked_dates('30000000-0000-0000-0000-000000000001')),'horizon bounded at final rental day');
 select pg_temp.calendar_assert((select count(*)=1 from jsonb_object_keys((select to_jsonb(row_data) from (select * from public.motor_blocked_dates('30000000-0000-0000-0000-000000000001') limit 1) row_data))),'availability returns no identities or other columns');
 reset role;
+delete from public.bookings where motor_id='30000000-0000-0000-0000-000000000001';
 update public.motors set operating_status='maintenance' where id='30000000-0000-0000-0000-000000000001';
 set local role authenticated;
 do $$ begin

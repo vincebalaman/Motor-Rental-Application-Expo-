@@ -66,3 +66,17 @@ test('Home excludes cancelled, rejected, elapsed requests and handles an empty a
   assert.equal(homeBooking(rows, today), null);
   assert.equal(homeBooking([], today), null);
 });
+
+test('in-use rentals remain Upcoming and take Home priority even when overdue', async () => {
+  const { homeBooking } = await import('../src/services/booking-history.ts');
+  const active = booking({ id: 'out', status: 'in_use', pickup_date: '2026-11-18', return_date: '2026-11-20' });
+  assert.equal(bookingSection(active, today), 'upcoming');
+  assert.equal(bookingStatusText(active, today), 'In use · Overdue');
+  assert.equal(homeBooking([booking({ status: 'approved' }), active], today).id, 'out');
+});
+test('only confirmed completed state goes into completed history, even after early return', () => {
+  const completed = booking({ status: 'completed' });
+  assert.equal(bookingSection(completed, today), 'history');
+  assert.equal(bookingStatusText(completed, today), 'Completed');
+  assert.equal(bookingStatusText(booking({ status: 'approved', return_date: today }), today), 'Past · Approved');
+});

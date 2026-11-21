@@ -19,6 +19,7 @@ const COLUMNS = 'id,name,type,daily_rate_centavos,description,image_path,updated
 
 export class InventoryError extends Error {}
 export function inventoryErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'message' in error && error.message === 'motor_has_active_bookings') return 'This motor has an approved or active rental. Resolve its bookings before archiving it or placing it under maintenance.';
   return error instanceof InventoryError ? error.message : 'We could not confirm the change. Refresh the catalog before trying again.';
 }
 

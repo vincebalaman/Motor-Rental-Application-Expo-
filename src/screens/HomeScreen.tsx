@@ -28,12 +28,12 @@ export default function HomeScreen() {
       <SubmitButton title="RETRY BOOKING STATUS" onPress={refreshBookings} />
       <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.linkButton}><Text style={styles.link}>My Bookings →</Text></Pressable>
     </View> : nextBooking ? <View style={styles.rideCard}>
-      <Text style={styles.rideEyebrow}>{nextBooking.status === 'approved' ? nextBooking.pickup_date <= today ? 'YOUR SCHEDULED RIDE' : 'YOUR NEXT APPROVED RIDE' : 'YOUR LATEST REQUEST'}</Text>
+      <Text style={styles.rideEyebrow}>{nextBooking.status === 'in_use' ? 'YOUR CURRENT RIDE' : nextBooking.status === 'approved' ? nextBooking.pickup_date <= today ? 'YOUR SCHEDULED RIDE' : 'YOUR NEXT APPROVED RIDE' : 'YOUR LATEST REQUEST'}</Text>
       <BookingStatus booking={nextBooking} today={today} />
       <Text style={styles.rideTitle}>{nextBooking.motor_name}</Text>
       <View style={styles.dates}><View style={styles.dateColumn}><Text style={styles.dateLabel}>PICKUP</Text><Text style={styles.dateValue}>{formatBookingDate(nextBooking.pickup_date)}</Text></View><Text style={styles.dateArrow}>→</Text><View style={styles.dateColumn}><Text style={styles.dateLabel}>RETURN</Text><Text style={styles.dateValue}>{formatBookingDate(nextBooking.return_date)}</Text></View></View>
       <Text style={styles.rideTotal}>{dailyPrice(nextBooking.total_centavos / 100)} <Text style={styles.copy}>total rental</Text></Text>
-      <Text style={styles.copy}>{nextBooking.status === 'pending' ? 'Waiting for admin approval. Your motor is not reserved yet.' : nextBooking.pickup_date <= today ? 'Your approved rental dates are underway. See the details for your schedule.' : 'Your request is approved. Your ride is reserved for these dates.'}</Text>
+      <Text style={styles.copy}>{nextBooking.status === 'in_use' ? nextBooking.return_date <= today ? 'Your motor is overdue and still recorded as in use. Please contact the rental shop about its return.' : 'Pickup recorded. Enjoy your ride, and check the scheduled return date.' : nextBooking.status === 'pending' ? 'Waiting for admin approval. Your motor is not reserved yet.' : nextBooking.pickup_date <= today ? 'Your approved rental dates are underway. See the details for your schedule.' : 'Your request is approved. Your ride is reserved for these dates.'}</Text>
       {bookingsLoading && <Text accessibilityLiveRegion="polite" style={styles.copy}>Refreshing booking status…</Text>}
       <SubmitButton title="VIEW BOOKING DETAILS →" onPress={() => router.push({ pathname: '/bookings/[bookingId]', params: { bookingId: nextBooking.id } })} style={styles.rideButton} />
       <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.linkButton}><Text style={styles.link}>All my bookings →</Text></Pressable>

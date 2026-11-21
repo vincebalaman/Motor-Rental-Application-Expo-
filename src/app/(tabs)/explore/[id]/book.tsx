@@ -86,15 +86,15 @@ export default function BookingForm() {
   return <MainSafe><ScrollView contentContainerStyle={styles.page}>
     <Pressable accessibilityRole="button" disabled={busy} onPress={() => quote ? setQuote(null) : router.replace({ pathname: '/explore/[id]', params: { id } })} style={styles.linkButton}><Text style={styles.link}>← {quote ? 'Edit dates' : 'Motor details'}</Text></Pressable>
     <Text style={styles.eyebrow}>{saved ? 'REQUEST SAVED' : quote ? 'ONE LAST LOOK' : 'YOUR NEXT RIDE'}</Text>
-    <Text style={styles.title}>{saved ? saved.status === 'approved' ? 'Your ride is already approved.' : 'Your request is on its way.' : quote ? 'Review your booking' : 'When are you riding?'}</Text>
+    <Text style={styles.title}>{saved ? saved.status === 'in_use' ? 'Your motor is already in use.' : saved.status === 'approved' ? 'Your ride is already approved.' : 'Your request is on its way.' : quote ? 'Review your booking' : 'When are you riding?'}</Text>
     {motor || saved ? <>
       <View style={styles.motorCard}>
         {motor?.imageUrl ? <Image source={{ uri: motor.imageUrl }} contentFit="cover" style={styles.photo} accessibilityLabel={`${motor.name} photo`} /> : <View style={[styles.photo, styles.photoPlaceholder]}><Text style={styles.copy}>Motor photo unavailable</Text></View>}
         <View style={styles.motorCopy}><Text style={styles.heading}>{saved?.motor_name ?? motor?.name}</Text><Text style={styles.copy}>{motor?.type}{motor?.type ? ' · ' : ''}{dailyPrice(displayedRate / 100)} / day</Text></View>
       </View>
       {saved ? <View style={styles.notice}>
-        <Text accessibilityRole="alert" style={styles.heading}>{saved.status === 'approved' ? 'Already approved' : 'Pending admin approval'}</Text>
-        <Text style={styles.copy}>{saved.status === 'approved' ? 'You already have an approved booking for these dates. View it in My Bookings.' : 'Your request is saved. Your motor is reserved only after the admin approves it.'}</Text>
+        <Text accessibilityRole="alert" style={styles.heading}>{saved.status === 'in_use' ? 'Already in use' : saved.status === 'approved' ? 'Already approved' : 'Pending admin approval'}</Text>
+        <Text style={styles.copy}>{saved.status === 'in_use' ? 'You already have an active rental for these dates. View it in My Bookings.' : saved.status === 'approved' ? 'You already have an approved booking for these dates. View it in My Bookings.' : 'Your request is saved. Your motor is reserved only after the admin approves it.'}</Text>
       </View> : <>
         {!quote && <>
           <View style={styles.dateRow}>

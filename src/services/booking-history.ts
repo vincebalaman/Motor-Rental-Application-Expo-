@@ -1,13 +1,15 @@
 import type { Booking } from './bookings';
 export type BookingSection = 'upcoming' | 'history';
-export const bookingStatusLabels = { pending: 'Pending approval', approved: 'Approved', rejected: 'Rejected', cancelled: 'Cancelled' };
-export const bookingStatusColors = { pending: '#825510', approved: '#21623c', rejected: '#991b1b', cancelled: '#687a75' };
+export const bookingStatusLabels = { pending: 'Pending approval', approved: 'Approved', in_use: 'In use', completed: 'Completed', rejected: 'Rejected', cancelled: 'Cancelled' };
+export const bookingStatusColors = { pending: '#825510', approved: '#21623c', in_use: '#21484a', completed: '#21623c', rejected: '#991b1b', cancelled: '#687a75' };
 export function bookingSection(booking: Booking, today: string): BookingSection {
+  if (booking.status === 'in_use') return 'upcoming';
   if (booking.status === 'pending') return booking.pickup_date >= today ? 'upcoming' : 'history';
   if (booking.status === 'approved') return booking.return_date > today ? 'upcoming' : 'history';
   return 'history';
 }
 export function bookingStatusText(booking: Booking, today: string): string {
+  if (booking.status === 'in_use' && booking.return_date <= today) return 'In use · Overdue';
   const past = (booking.status === 'approved' && booking.return_date <= today) || (booking.status === 'pending' && booking.pickup_date < today);
   return `${past ? 'Past · ' : ''}${bookingStatusLabels[booking.status]}`;
 }
@@ -19,6 +21,8 @@ export function bookingsInSection(bookings: Booking[], section: BookingSection, 
 export function homeBooking(bookings: Booking[], today: string): Booking | null {
   const upcoming = bookingsInSection(bookings, 'upcoming', today);
   // Scheduled dates already underway remain visible until the exclusive return day.
+  const active = upcoming.find(booking => booking.status === 'in_use');
+  if (active) return active;
   const approved = upcoming.find(booking => booking.status === 'approved');
   if (approved) return approved;
   return upcoming.filter(booking => booking.status === 'pending')

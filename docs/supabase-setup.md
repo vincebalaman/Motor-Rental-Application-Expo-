@@ -113,8 +113,7 @@ perform this operation. Do not identify an admin by a hard-coded email or signup
   persisted sessions, and request deadlines. AuthContext owns token refresh and cleanup.
 
 The initial accounts/catalog migration does not include bookings. Apply the separate
-client-bookings migration below to enable the booking flow. Admin screens and
-archive/maintenance restrictions involving approved bookings follow separately.
+client-bookings migration below to enable the booking flow. Admin screens and rental safeguards use the later migrations described below.
 
 ## Remaining integration work
 
@@ -125,7 +124,7 @@ archive/maintenance restrictions involving approved bookings follow separately.
 4. Complete the shared inventory device checklist above and verify hosted storage
    signing with an uploaded image. Local SQL policies have already been tested.
 5. Apply the client booking migration below and complete the booking device checks.
-6. Complete the admin booking device checks below; add pickup/return and archive/maintenance restrictions.
+6. Apply the handover migration and complete the admin pickup/return device checks below.
    Approval transitions already check date conflicts and have simultaneous-request tests.
 
 Local accounts do not become cloud identities simply because the same email exists.
@@ -197,7 +196,7 @@ Device checks after applying the migration:
 checks database permissions, price snapshots, cancellation, overlapping/adjacent
 ranges, concurrent duplicate submissions, and simultaneous overlapping approvals in
 an isolated PostgreSQL instance. Hosted migration application and the device checks
-remain manual; pickup/return and payment are separate work.
+remain manual; payment is separate work.
 
 
 ## Admin booking management
@@ -233,7 +232,7 @@ Device checks:
 7. Check an empty queue, a failed load, a retry, and more than 50 requests if available.
 
 The admin Home screen links to booking review, inventory, and account settings.
-Dashboard counts and pickup/return tracking can be added in the next step.
+Dashboard counts can be added separately. Pickup/return tracking requires the handover migration below.
 
 
 ## Calendar booking UI
@@ -340,3 +339,59 @@ verify Home's name, reopen the app to verify persistence, remove the optional ph
 try invalid values, cancel editing, and retry after a failed connection. On an admin
 account/device, refresh booking details and verify that the client's updated name and
 phone appear. Backend tests exercise own-profile writes and admin read visibility.
+
+
+## Admin pickup and return tracking
+
+Run `supabase/migrations/20261121000200_rental_handover.sql` once in the development
+SQL Editor, after all existing migrations. Existing requests retain their status.
+The migration adds In Use and Completed, actual pickup/return timestamps and admin
+IDs, guarded handover RPC, reservation safeguards, and updated availability checks.
+No new native dependency or environment variable is required.
+
+Admin Bookings → Approved → Record Pickup → Confirm Pickup records actual handover.
+Pickup is allowed only on/after pickup and before the exclusive return day in
+Philippine time; it requires an approved request, a usable motor, and no other active
+handover. Future pickups and already elapsed approved dates cannot be marked picked
+up. Pending, rejected, cancelled, and completed requests cannot be handed over.
+
+In Use → Record Return → Confirm Return records physical return and moves the rental
+to Completed. Early and late returns are supported. Original rental dates, rate, and
+total remain unchanged; the app does not calculate late fees, refunds, or payment.
+Never mark a return until the motor is actually back. Both handover operations are
+retry-safe and serialize on the motor row; only one rental per motor can be In Use.
+Audit times are recorded after acquiring locks, using the server clock.
+
+An unreturned motor stays In Use even after its scheduled dates expire. From its
+exclusive return day it is labelled Overdue. An overdue motor blocks new requests,
+approvals, and the full available calendar horizon until actual return is recorded.
+A motor still In Use cannot be handed to the next client even if their nominal dates
+are adjacent. Future bookings beyond an active rental's scheduled return may still
+be requested/approved before it is overdue; their pickup still requires actual return.
+
+Archiving or placing a motor under maintenance is rejected while it has an In Use
+rental or an approved booking whose return date is still ahead. Editing listing text
+or daily rates is allowed and does not alter saved booking prices.
+
+Clients see actual handover times in booking details. In Use remains in Upcoming,
+including overdue rentals, and takes priority on Home. Completed appears in History.
+Approved dates that elapsed without handover remain Past · Approved, never Completed.
+Existing cancelled/rejected/pending cancellation permissions do not change.
+
+Device acceptance checks:
+
+1. As admin, approve a request beginning today, confirm pickup, and verify In Use and
+   actual pickup time in both admin and client views after refresh.
+2. Confirm return and verify Completed, both timestamps, and unchanged total in History.
+3. Try early pickup, return before pickup, client handover calls, repeated actions,
+   and stale decisions from another device; unsupported transitions must fail safely.
+4. Check an overdue rental: it remains In Use/visible on Home and blocks new handovers
+   until returned. Past uncollected approved requests must remain uncompleted.
+5. Try archiving/maintenance on a reserved motor. The app must explain the restriction.
+6. Verify original calendar overlap checks and pending cancellation still work.
+
+`npm test` covers service handover confirmation and client classification.
+`npm run test:backend` also verifies admin-only transitions, timestamp/actor audit,
+retry behavior, unchanged totals, overdue calendar/request/approval blocking,
+archival restrictions, and simultaneous pickup/return retries in local PostgreSQL.
+Hosted migration application and actual-device checks still require manual testing.

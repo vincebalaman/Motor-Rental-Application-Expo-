@@ -19,10 +19,12 @@ trap cleanup EXIT INT TERM
   -f supabase/migrations/20261117000200_local_motor_import.sql \
   -f supabase/migrations/20261120000100_client_bookings.sql \
   -f supabase/migrations/20261121000100_booking_calendar.sql \
+  -f supabase/migrations/20261121000200_rental_handover.sql \
   -f supabase/tests/permissions.sql \
   -f supabase/tests/local-import.sql \
   -f supabase/tests/bookings.sql \
-  -f supabase/tests/booking-calendar.sql >"$TEST_ROOT/results.log" 2>&1 || {
+  -f supabase/tests/booking-calendar.sql \
+  -f supabase/tests/rental-handover.sql >"$TEST_ROOT/results.log" 2>&1 || {
     cat "$TEST_ROOT/results.log"
     exit 1
   }
@@ -53,5 +55,15 @@ SECOND_PID=$!
 wait "$FIRST_PID"
 wait "$SECOND_PID"
 booking_sql -f supabase/tests/booking-concurrent-check.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/tests/handover-concurrent-setup.sql >>"$TEST_ROOT/results.log"
+for HANDOVER_ACTION in pickup return; do
+  booking_sql -v handover_action="$HANDOVER_ACTION" -f supabase/tests/handover-concurrent.sql >"$TEST_ROOT/handover-$HANDOVER_ACTION-1.log" 2>&1 &
+  FIRST_PID=$!
+  booking_sql -v handover_action="$HANDOVER_ACTION" -f supabase/tests/handover-concurrent.sql >"$TEST_ROOT/handover-$HANDOVER_ACTION-2.log" 2>&1 &
+  SECOND_PID=$!
+  wait "$FIRST_PID"
+  wait "$SECOND_PID"
+done
+booking_sql -f supabase/tests/handover-concurrent-check.sql >>"$TEST_ROOT/results.log"
 tail -5 "$TEST_ROOT/results.log"
 echo "Local PostgreSQL test logs: $TEST_ROOT"

@@ -1,9 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type BookingStatus = 'pending' | 'approved' | 'in_use' | 'completed' | 'rejected' | 'cancelled';
 export type Booking = {
   id: string; client_id: string; motor_id: string; motor_name: string;
   pickup_date: string; return_date: string; daily_rate_centavos: number; total_centavos: number;
+  picked_up_at?: string | null; returned_at?: string | null; picked_up_by?: string | null; returned_by?: string | null;
   status: BookingStatus; created_at: string; updated_at: string;
 };
 export type AdminBooking = Booking & { client: { id: string; full_name: string; phone: string | null } | null };
@@ -11,9 +12,13 @@ export const ADMIN_BOOKING_PAGE_SIZE = 50;
 export function adminBookingErrorMessage(error: unknown): string {
   const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
   const messages: Record<string, string> = {
+    booking_invalid_transition: 'This booking has already changed. Refresh the list before recording a handover.',
+    booking_pickup_outside_dates: 'Pickup can only be recorded during the approved rental dates, using Philippine time.',
+    booking_motor_still_out: 'This motor is still with another client. Confirm its return before recording the next pickup.',
+    booking_invalid_action: 'This handover action is not supported. Refresh bookings.',
     booking_admin_required: 'Only an administrator can review bookings.',
-    booking_dates_unavailable: 'Approval failed: this motor already has an approved booking for overlapping dates. You can reject this request instead.',
-    booking_motor_unavailable: 'Approval failed: this motor is archived or under maintenance.',
+    booking_dates_unavailable: 'The motor has an overlapping approved or active rental. An overdue motor must be returned before another booking is approved.',
+    booking_motor_unavailable: 'This motor is archived or under maintenance and cannot be handed over or approved.',
     booking_invalid_dates: 'Approval failed: the pickup date has already passed in Philippine time.',
     booking_not_pending: 'This request has already changed. Refresh the list to see its current status.',
     booking_not_found: 'This booking could not be found. Refresh the list.',
@@ -59,6 +64,12 @@ export function bookingErrorMessage(error: unknown): string {
 }
 export function createBookingService(client: SupabaseClient) {
   return {
+    async handover(id: string, action: 'pickup' | 'return'): Promise<Booking> {
+      const { data, error } = await client.rpc('record_motor_handover', { p_booking_id: id, p_action: action });
+      if (error) throw error;
+      if (!data || data.id !== id || data.status !== (action === 'pickup' ? 'in_use' : 'completed') || !data.picked_up_at || (action === 'return' && !data.returned_at)) throw new BookingError('The handover could not be confirmed. Refresh bookings.');
+      return data;
+    },
     async get(clientId: string, bookingId: string): Promise<Booking | null> {
       const { data, error } = await client.from('bookings').select('*').eq('client_id', clientId).eq('id', bookingId).maybeSingle();
       if (error) throw error;
