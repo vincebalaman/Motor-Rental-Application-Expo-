@@ -1,17 +1,17 @@
-import { useBookingClock } from '@/hooks/use-booking-clock';
-import { bookingScheduleLabel, bookingIsOverdue } from '@/services/booking-time';
+import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
-import { useBookings } from '@/context/BookingContext';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import CatalogCard, { dailyPrice } from '@/components/catalog-card';
 import BookingStatus from '@/components/booking-status';
-import { homeBooking } from '@/services/booking-history';
-import { manilaToday } from '@/services/bookings';
+import { dailyPrice } from '@/components/catalog-card';
 import MainSafe from '@/components/mainsafe';
-import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
+import { useBookings } from '@/context/BookingContext';
 import { useMotorInventory } from '@/context/MotorContext';
+import { useBookingClock } from '@/hooks/use-booking-clock';
+import { homeBooking } from '@/services/booking-history';
+import { bookingIsOverdue, bookingScheduleLabel } from '@/services/booking-time';
+import { manilaToday } from '@/services/bookings';
 import AdminHomeScreen from './AdminHomeScreen';
 
 export default function HomeScreen() {
@@ -22,35 +22,56 @@ export default function HomeScreen() {
   useFocusEffect(useCallback(() => { refreshBookings(); }, [refreshBookings]));
   const today = manilaToday(new Date(clock));
   const nextBooking = homeBooking(bookings, today, clock);
+  const overdue = nextBooking ? bookingIsOverdue(nextBooking, today, clock) : false;
+  const firstName = user?.fullName.trim().split(/\s+/)[0] || 'there';
   if (user?.role === 'admin') return <AdminHomeScreen />;
   return <MainSafe><ScrollView contentContainerStyle={styles.page} refreshControl={<RefreshControl refreshing={refreshing || bookingsLoading} onRefresh={() => { refresh(); refreshBookings(); }} tintColor="#21484a" />}>
-    <View style={styles.header}><View style={styles.greeting}><Text style={styles.brand}>MOTORRENT</Text><Text style={styles.hello}>Hi, {user?.fullName.split(' ')[0] || 'there'}.</Text></View><Pressable onPress={() => router.navigate('/account')} accessibilityRole="button" accessibilityLabel="Open your account" style={styles.avatar}><Text style={styles.initial}>{user?.fullName.charAt(0).toUpperCase()}</Text></Pressable></View>
-    {bookingError ? <View style={styles.notice}>
-      <Text style={styles.section}>Let’s check your ride</Text><Text accessibilityRole="alert" style={styles.copy}>Your booking status could not be refreshed. Try again to see your latest ride.</Text>
-      <SubmitButton title="RETRY BOOKING STATUS" onPress={refreshBookings} />
-      <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.linkButton}><Text style={styles.link}>My Bookings →</Text></Pressable>
-    </View> : nextBooking ? <View style={styles.rideCard}>
-      <Text style={styles.rideEyebrow}>{nextBooking.status === 'in_use' ? 'YOUR CURRENT RIDE' : nextBooking.status === 'approved' ? (nextBooking.scheduled_pickup_at ? Date.parse(nextBooking.scheduled_pickup_at) <= clock : nextBooking.pickup_date <= today) ? 'YOUR SCHEDULED RIDE' : 'YOUR NEXT APPROVED RIDE' : 'YOUR LATEST REQUEST'}</Text>
-      <BookingStatus booking={nextBooking} today={today} now={clock} />
-      <Text style={styles.rideTitle}>{nextBooking.motor_name}</Text>
-      <View style={styles.dates}><View style={styles.dateColumn}><Text style={styles.dateLabel}>PICKUP</Text><Text style={styles.dateValue}>{bookingScheduleLabel(nextBooking, 'pickup')}</Text></View><Text style={styles.dateArrow}>→</Text><View style={styles.dateColumn}><Text style={styles.dateLabel}>RETURN</Text><Text style={styles.dateValue}>{bookingScheduleLabel(nextBooking, 'return')}</Text></View></View>
-      <Text style={styles.rideTotal}>{dailyPrice(nextBooking.total_centavos / 100)} <Text style={styles.copy}>base rental</Text></Text>
-      <Text style={styles.copy}>{nextBooking.status === 'in_use' ? bookingIsOverdue(nextBooking, today, clock) ? 'Your motor is overdue and still recorded as in use. Please contact the rental shop about its return.' : 'Pickup recorded. Enjoy your ride, and check the scheduled return time.' : nextBooking.status === 'pending' ? 'Waiting for admin approval. Your motor is not reserved yet.' : (nextBooking.scheduled_pickup_at ? Date.parse(nextBooking.scheduled_pickup_at) <= clock : nextBooking.pickup_date <= today) ? 'Your scheduled pickup time has arrived. See the details for your schedule.' : 'Your request is approved. Your ride is reserved for this schedule.'}</Text>
-      {bookingsLoading && <Text accessibilityLiveRegion="polite" style={styles.copy}>Refreshing booking status…</Text>}
-      <SubmitButton title="VIEW BOOKING DETAILS →" onPress={() => router.push({ pathname: '/bookings/[bookingId]', params: { bookingId: nextBooking.id } })} style={styles.rideButton} />
-      <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.linkButton}><Text style={styles.link}>All my bookings →</Text></Pressable>
-    </View> : bookingsLoading ? <View style={styles.notice}><ActivityIndicator color="#21484a" accessibilityLabel="Checking your next ride" /><Text style={styles.copy}>Checking your next ride…</Text></View> : <View style={styles.hero}><Text style={styles.eyebrow}>A RIDE FOR YOUR EVERYDAY</Text><Text style={styles.title}>Your next trip{ '\n' }starts here.</Text><Text style={styles.heroCopy}>Find a motor that fits your plans and your budget.</Text><SubmitButton title="BROWSE MOTORS  →" onPress={() => router.navigate('/explore')} style={styles.button} /></View>}
-    <View style={styles.heading}><View><Text style={styles.section}>Explore the collection</Text><Text style={styles.copy}>A few rides to get you started.</Text></View><Pressable accessibilityRole="button" onPress={() => router.navigate('/explore')} style={styles.linkButton}><Text style={styles.link}>See all →</Text></Pressable></View>
-    {loading ? <ActivityIndicator color="#21484a" accessibilityLabel="Loading motors" /> : error ? <View style={styles.notice}><Text accessibilityRole="alert" style={styles.copy}>{error}</Text><SubmitButton title="TRY AGAIN" onPress={retry} /></View> : motors.length ? motors.slice(0, 3).map(motor => <CatalogCard key={motor.id} motor={motor} />) : <View style={styles.notice}><Text style={styles.section}>More rides on the way</Text><Text style={styles.copy}>There are no motors listed yet. Pull down to check again.</Text></View>}
-    {refreshError && <Text accessibilityRole="alert" style={styles.copy}>{refreshError}</Text>}
-    <Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.linkButton}><Text style={styles.link}>View all my bookings →</Text></Pressable>
+    <View style={styles.header}>
+      <View style={styles.greeting}><Text style={styles.brand}>MotorRent</Text><Text accessibilityRole="header" style={styles.hello}>Hello, {firstName}.</Text><Text style={styles.copy}>Where will you go today?</Text></View>
+      <Pressable onPress={() => router.navigate('/account')} accessibilityRole="button" accessibilityLabel="Open your account" style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}><Text style={styles.initial}>{user?.fullName.trim().charAt(0).toUpperCase() || 'M'}</Text></Pressable>
+    </View>
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}><Text accessibilityRole="header" style={styles.sectionTitle}>{nextBooking?.status === 'in_use' ? 'Your current ride' : 'Your next ride'}</Text><Pressable accessibilityRole="button" onPress={() => router.navigate('/bookings')} style={styles.textButton}><Text style={styles.link}>My bookings ↗</Text></Pressable></View>
+      {bookingError ? <View style={styles.card}>
+        <Text style={styles.cardTitle}>Unable to update your booking</Text><Text accessibilityRole="alert" style={styles.copy}>Refresh to check your latest ride.</Text><Pressable accessibilityRole="button" onPress={refreshBookings} style={styles.outlineButton}><Text style={styles.link}>Try again</Text></Pressable>
+      </View> : nextBooking ? <View style={styles.card}>
+        <BookingStatus booking={nextBooking} today={today} now={clock} />
+        <Text style={styles.rideTitle}>{nextBooking.motor_name}</Text>
+        <View style={styles.schedule}>
+          <View style={styles.scheduleRow}><View style={styles.markerColumn}><View style={styles.pickupMarker} /><View style={styles.timeline} /></View><View style={styles.scheduleCopy}><Text style={styles.label}>Pickup</Text><Text style={styles.scheduleValue}>{bookingScheduleLabel(nextBooking, 'pickup')}</Text></View></View>
+          <View style={styles.scheduleRow}><View style={styles.markerColumn}><View style={styles.returnMarker} /></View><View style={styles.scheduleCopy}><Text style={styles.label}>Return by</Text><Text style={[styles.scheduleValue, overdue && styles.warning]}>{bookingScheduleLabel(nextBooking, 'return')}</Text></View></View>
+        </View>
+        <Text style={[styles.caption, overdue && styles.warning]}>{nextBooking.status === 'pending' ? 'Awaiting approval. Your motor is not reserved yet.' : nextBooking.status === 'in_use' ? overdue ? 'Return overdue. Please contact the rental shop.' : 'Pickup recorded. Please return by the agreed time.' : 'Approved. Your ride is reserved for this schedule.'}</Text>
+        {bookingsLoading && <Text accessibilityLiveRegion="polite" style={styles.caption}>Updating booking…</Text>}
+        <View style={styles.cardFooter}>
+          <View style={styles.priceGroup}><Text style={styles.label}>Base rental</Text><Text style={styles.price}>{dailyPrice(nextBooking.total_centavos / 100)}</Text></View>
+          <Pressable accessibilityRole="button" accessibilityLabel={`View booking details for ${nextBooking.motor_name}`} onPress={() => router.push({ pathname: '/bookings/[bookingId]', params: { bookingId: nextBooking.id } })} style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}><Text style={styles.link}>View details →</Text></Pressable>
+        </View>
+      </View> : bookingsLoading ? <View style={styles.loadingCard}><ActivityIndicator color="#21484a" accessibilityLabel="Checking your next ride" /><Text style={styles.copy}>Checking your next ride…</Text></View> : <View style={styles.card}><Text style={styles.cardTitle}>No upcoming rides</Text><Text style={styles.copy}>Find a motor you like and request your next ride.</Text></View>}
+      <Pressable accessibilityRole="button" onPress={() => router.navigate('/explore')} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}><Text style={styles.primaryText}>Browse motors</Text><Text style={styles.primaryArrow}>→</Text></Pressable>
+    </View>
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}><Text accessibilityRole="header" style={styles.sectionTitle}>From the collection</Text><Pressable accessibilityRole="button" onPress={() => router.navigate('/explore')} style={styles.textButton}><Text style={styles.link}>View all ↗</Text></Pressable></View>
+      {loading ? <View style={styles.loadingCard}><ActivityIndicator color="#21484a" accessibilityLabel="Loading motors" /><Text style={styles.copy}>Loading motors…</Text></View> : error ? <View style={styles.card}><Text accessibilityRole="alert" style={styles.copy}>{error}</Text><Pressable accessibilityRole="button" onPress={retry} style={styles.outlineButton}><Text style={styles.link}>Try again</Text></Pressable></View> : motors.length ? <View style={styles.collection}>
+        {motors.slice(0, 3).map((motor, index) => <Pressable key={motor.id} accessibilityRole="button" accessibilityLabel={`View ${motor.name}, ${dailyPrice(motor.price)} per day`} onPress={() => router.push({ pathname: '/explore/[id]', params: { id: motor.id } })} style={({ pressed }) => [styles.motorRow, index > 0 && styles.rowDivider, pressed && styles.pressed]}>
+          <View style={styles.photo}>{motor.imageUrl ? <Image source={{ uri: motor.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={`${motor.name} photo`} /> : <Text style={styles.photoPlaceholder}>No photo</Text>}</View>
+          <View style={styles.motorCopy}><Text style={styles.motorType}>{motor.type}</Text><Text style={styles.motorName}>{motor.name}</Text><Text style={styles.motorPrice}>{dailyPrice(motor.price)}<Text style={styles.priceUnit}> / day</Text></Text></View><Text accessible={false} style={styles.rowArrow}>›</Text>
+        </Pressable>)}
+      </View> : <View style={styles.card}><Text style={styles.cardTitle}>More rides on the way</Text><Text style={styles.copy}>No motors are listed yet. Pull down to check again.</Text></View>}
+      {refreshError && <Text accessibilityRole="alert" style={styles.warning}>{refreshError}</Text>}
+    </View>
   </ScrollView></MainSafe>;
 }
 const styles = StyleSheet.create({
-  rideCard: { padding: 24, gap: 14, borderRadius: 24, borderWidth: 1, borderColor: '#d8e0d2', backgroundColor: '#faf8f2' }, rideEyebrow: { color: '#687e6b', fontSize: 10, fontWeight: '800', letterSpacing: 1.6 }, rideTitle: { color: '#183334', fontSize: 27, fontWeight: '800' }, dates: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 14, backgroundColor: '#edf0e7', borderRadius: 14, padding: 16 }, dateColumn: { flex: 1, minWidth: 100, gap: 7 }, dateLabel: { color: '#7b887a', fontSize: 10, fontWeight: '800', letterSpacing: 1 }, dateValue: { color: '#21484a', fontSize: 14, fontWeight: '700' }, dateArrow: { color: '#6b806b', fontSize: 19 }, rideTotal: { color: '#21484a', fontSize: 22, fontWeight: '800' }, rideButton: { borderRadius: 12 },
-  page: { padding: 22, gap: 20, paddingBottom: 28, maxWidth: 780, width: '100%', alignSelf: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, greeting: { flex: 1 }, brand: { fontSize: 11, color: '#526e65', letterSpacing: 2, fontWeight: '800' }, hello: { fontSize: 24, color: '#183334', fontWeight: '800', marginTop: 6 },
-  avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#e1e8df', alignItems: 'center', justifyContent: 'center' }, initial: { color: '#21484a', fontSize: 19, fontWeight: '700' },
-  hero: { backgroundColor: '#21484a', padding: 26, borderRadius: 24, gap: 15 }, eyebrow: { color: '#c6d8ba', fontSize: 10, letterSpacing: 1.7, fontWeight: '800' }, title: { fontSize: 36, lineHeight: 42, color: '#faf8ef', fontWeight: '800' }, heroCopy: { color: '#d6e0d7', fontSize: 15, lineHeight: 23 }, button: { backgroundColor: '#517257', borderRadius: 12 },
-  heading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }, section: { fontSize: 20, fontWeight: '800', color: '#183334' }, copy: { color: '#687a75', fontSize: 14, lineHeight: 22, marginTop: 5 }, link: { color: '#21484a', fontSize: 14, fontWeight: '700' }, linkButton: { paddingVertical: 12, paddingHorizontal: 4, minHeight: 44 }, notice: { padding: 20, backgroundColor: '#e5eadd', borderRadius: 18, gap: 6 },
+  page: { padding: 24, paddingTop: 20, paddingBottom: 32, gap: 30, maxWidth: 720, width: '100%', alignSelf: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 }, greeting: { flex: 1, gap: 6 }, brand: { fontSize: 13, color: '#526663', fontWeight: '600', marginBottom: 4 }, hello: { fontSize: 28, color: '#1d2928', fontWeight: '700', letterSpacing: -0.7 },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5ebe7', borderWidth: 1, borderColor: '#d6dfd9', alignItems: 'center', justifyContent: 'center' }, initial: { color: '#21484a', fontSize: 18, fontWeight: '600' },
+  section: { gap: 12 }, sectionHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 4 }, sectionTitle: { fontSize: 17, fontWeight: '600', color: '#1d2928', letterSpacing: -0.3 },
+  card: { padding: 20, gap: 14, borderRadius: 18, borderWidth: 1, borderColor: '#e2e5de', backgroundColor: '#fff' }, cardTitle: { fontSize: 19, fontWeight: '600', color: '#1d2928' }, rideTitle: { fontSize: 24, fontWeight: '600', color: '#1d2928', letterSpacing: -0.5 }, copy: { color: '#5c6b67', fontSize: 14, lineHeight: 22 }, caption: { color: '#5c6b67', fontSize: 12, lineHeight: 19 }, label: { color: '#65736e', fontSize: 12, lineHeight: 18 },
+  schedule: { paddingVertical: 2 }, scheduleRow: { flexDirection: 'row', gap: 12 }, markerColumn: { width: 12, alignItems: 'center', paddingTop: 5 }, pickupMarker: { width: 9, height: 9, borderRadius: 5, borderWidth: 2, borderColor: '#21484a', backgroundColor: '#fff' }, returnMarker: { width: 9, height: 9, borderRadius: 2, backgroundColor: '#21484a' }, timeline: { width: 1, flex: 1, minHeight: 34, backgroundColor: '#dce3dc', marginVertical: 5 }, scheduleCopy: { flex: 1, gap: 3, paddingBottom: 14 }, scheduleValue: { color: '#273b37', fontSize: 14, lineHeight: 22, fontWeight: '500' },
+  cardFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#edf0e9', paddingTop: 16 }, priceGroup: { gap: 3 }, price: { color: '#1d2928', fontSize: 21, fontWeight: '600', letterSpacing: -0.4 },
+  primaryButton: { minHeight: 54, borderRadius: 13, paddingVertical: 15, paddingHorizontal: 20, backgroundColor: '#21484a', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, primaryText: { color: '#fff', fontSize: 15, fontWeight: '600' }, primaryArrow: { color: '#fff', fontSize: 20 },
+  outlineButton: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 11, borderWidth: 1, borderColor: '#dce4dd' }, textButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 2 }, link: { color: '#21484a', fontSize: 13, fontWeight: '600' },
+  collection: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#e2e5de', overflow: 'hidden' }, motorRow: { flexDirection: 'row', gap: 14, padding: 16, alignItems: 'center' }, rowDivider: { borderTopWidth: 1, borderTopColor: '#edf0e9' }, photo: { width: 82, height: 82, backgroundColor: '#eff2ec', borderRadius: 12, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }, photoPlaceholder: { color: '#65736e', fontSize: 11 }, motorCopy: { flex: 1, gap: 5 }, motorType: { color: '#65736e', fontSize: 11 }, motorName: { color: '#1d2928', fontSize: 16, fontWeight: '600' }, motorPrice: { color: '#21484a', fontSize: 14, fontWeight: '600' }, priceUnit: { color: '#65736e', fontSize: 12, fontWeight: '400' }, rowArrow: { color: '#65736e', fontSize: 24 },
+  loadingCard: { padding: 24, gap: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#e2e5de' }, warning: { color: '#9b3d29', fontSize: 13, lineHeight: 20 }, pressed: { opacity: 0.7 },
 });
