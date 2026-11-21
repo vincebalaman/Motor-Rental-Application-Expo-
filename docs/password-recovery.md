@@ -27,3 +27,20 @@ Requesting a link always gives a generic confirmation to avoid revealing whether
 Automated tests cover request normalization, callback parsing, PKCE flow forwarding, duplicate exchange handling, rejection of ordinary sessions, identity checks, password validation, and sign-out. Actual email delivery, dashboard allowlist, and iPhone mail-to-app routing require the device test above. No SQL migration is required.
 
 References: [Supabase redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls), [native deep linking](https://supabase.com/docs/guides/auth/native-mobile-deep-linking), [password recovery](https://supabase.com/docs/guides/auth/passwords).
+
+## Callback diagnostics in Expo Go
+
+The reset route now checks both router parameters and the original incoming reset
+URL from Expo Linking. Query/fragment callback fields can be recovered when a
+router omits them. Unrelated launch paths, conflicting/duplicate values, error
+callbacks and implicit token links remain rejected; a PKCE code must still be
+exchanged and its stored recovery flow verified by Supabase before updating a
+password. An existing signed-in session does not authorize recovery.
+
+Development errors show only callback field names, never codes, tokens or the
+complete link. “Callback fields: none” means the reset screen did not receive
+verification details: check the email template uses `{{ .ConfirmationURL }}`, the
+specific current return URL/query pattern is allowed, and the newest link returns
+to the same app installation. An `access_token`/`refresh_token` callback is an old
+implicit format; request a fresh PKCE link from the current app. A code with an
+expired/verifier error requires a fresh request without clearing app storage.

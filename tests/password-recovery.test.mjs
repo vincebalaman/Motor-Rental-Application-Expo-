@@ -5,7 +5,7 @@ registerHooks({ resolve(specifier, context, next) {
   if (specifier === './auth' && context.parentURL?.endsWith('/services/password-recovery.ts')) return next('./auth.ts', context);
   return next(specifier, context);
 } });
-const { createPasswordRecoveryService, parseRecoveryCallback, recoveryErrorMessage } = await import('../src/services/password-recovery.ts');
+const { createPasswordRecoveryService, parseRecoveryCallback, recoveryCallbackParams, recoveryCallbackDiagnostic, recoveryErrorMessage } = await import('../src/services/password-recovery.ts');
 function fixture(flow = 'recovery') {
   const calls = [];
   const auth = {
@@ -70,4 +70,26 @@ test('expired exchanges fail safely and server messages are not exposed', async 
   await assert.rejects(service.exchange({ code: 'expired' }));
   assert.match(recoveryErrorMessage({ code: 'flow_state_expired' }), /expired/);
   assert.doesNotMatch(recoveryErrorMessage(new Error('secret')), /secret/);
+});
+
+test('Expo Go reset callback can read the original query or fragment without exposing values', () => {
+  for (const separator of ['?', '#']) {
+    const parsed = recoveryCallbackParams({}, `exp://192.168.1.2:8081/--/auth/reset-password${separator}code=secret&sb_flow_id=flow`);
+    assert.deepEqual(parseRecoveryCallback(parsed), { code: 'secret', flowId: 'flow' });
+    assert.equal(recoveryCallbackDiagnostic(parsed), 'Callback fields: code, sb_flow_id');
+    assert.doesNotMatch(recoveryCallbackDiagnostic(parsed), /secret/);
+  }
+});
+test('unrelated launch URLs cannot authorize recovery and conflicting callback parameters fail', () => {
+  assert.throws(() => parseRecoveryCallback(recoveryCallbackParams({}, 'exp://host:8081/--/explore?code=secret')));
+  for (const url of ['exp://host:8081/--/auth/reset-password?code=a&code=b', 'exp://host:8081/--/auth/reset-password?code=a#code=b']) {
+    assert.throws(() => parseRecoveryCallback(recoveryCallbackParams({}, url)));
+  }
+  assert.throws(() => parseRecoveryCallback(recoveryCallbackParams({ code: 'new' }, 'exp://host:8081/--/auth/reset-password?code=old')));
+  assert.deepEqual(parseRecoveryCallback(recoveryCallbackParams({ code: 'a' }, 'motorrentalexpo://auth/reset-password?code=a')), { code: 'a', flowId: undefined });
+});
+test('missing-code and implicit/error callbacks remain unauthorized with actionable messages', () => {
+  assert.throws(() => parseRecoveryCallback({}), /without a password-reset verification code/);
+  assert.throws(() => parseRecoveryCallback({ access_token: 'secret' }), /older recovery format/);
+  assert.throws(() => parseRecoveryCallback({ code: 'a', error_code: 'otp_expired' }), /expired or already used/);
 });

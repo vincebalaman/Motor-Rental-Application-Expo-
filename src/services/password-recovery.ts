@@ -4,11 +4,50 @@ import { withAuthTimeout } from './auth';
 export class RecoveryError extends Error {}
 export type RecoveryCallback = { code: string; flowId?: string };
 
-export function parseRecoveryCallback(params: Record<string, string | string[] | undefined>): RecoveryCallback {
-  if (params.error || params.error_code || params.access_token || params.refresh_token ||
-      typeof params.code !== 'string' || !params.code.trim() ||
-      (params.sb_flow_id !== undefined && typeof params.sb_flow_id !== 'string')) {
-    throw new RecoveryError('This reset link is invalid or expired. Request a new link and open it on the device that requested it.');
+const CALLBACK_FIELDS = ['code', 'sb_flow_id', 'error', 'error_code', 'access_token', 'refresh_token'] as const;
+type CallbackParams = Record<string, string | string[] | undefined>;
+
+// Expo Go/router versions may expose callback values differently. Read the original
+// reset URL too, but never use an unrelated cached launch URL or override conflicts.
+export function recoveryCallbackParams(params: CallbackParams, rawUrl?: string | null): CallbackParams {
+  const result: CallbackParams = {};
+  for (const field of CALLBACK_FIELDS) if (params[field] !== undefined) result[field] = params[field];
+  if (!rawUrl) return result;
+  let url: URL;
+  try { url = new URL(rawUrl); } catch { return result; }
+  const path = url.protocol === 'motorrentalexpo:' ? `/${url.hostname}${url.pathname}` : url.pathname;
+  if (!/\/auth\/reset-password\/?$/.test(path)) return result;
+  const fragment = new URLSearchParams(url.hash.replace(/^#/, ''));
+  for (const field of CALLBACK_FIELDS) {
+    const values = [...url.searchParams.getAll(field), ...fragment.getAll(field)];
+    if (!values.length) continue;
+    const routed = result[field];
+    result[field] = values.length !== 1 || (routed !== undefined && routed !== values[0])
+      ? [...values, ...(typeof routed === 'string' ? [routed] : [])]
+      : values[0];
+  }
+  return result;
+}
+
+export function recoveryCallbackDiagnostic(params: CallbackParams): string {
+  // Field names only: never display or log recovery codes, tokens, or the full URL.
+  const fields = CALLBACK_FIELDS.filter(field => params[field] !== undefined);
+  return `Callback fields: ${fields.join(', ') || 'none'}`;
+}
+
+export function parseRecoveryCallback(params: CallbackParams): RecoveryCallback {
+  if (params.error || params.error_code) {
+    throw new RecoveryError('Supabase could not verify this email link. It may be expired or already used. Request a new link.');
+  }
+  if (params.access_token !== undefined || params.refresh_token !== undefined) {
+    throw new RecoveryError('This link uses an older recovery format. Request a new link from this app to continue securely.');
+  }
+  if (params.code === undefined || params.code === '') {
+    throw new RecoveryError('The app opened without a password-reset verification code. Request a new link and check the reset email template uses the Supabase confirmation link.');
+  }
+  if (typeof params.code !== 'string' || !params.code.trim() ||
+      (params.sb_flow_id !== undefined && (typeof params.sb_flow_id !== 'string' || !params.sb_flow_id.trim()))) {
+    throw new RecoveryError('This reset link contains invalid verification details. Request a new link.');
   }
   return { code: params.code, flowId: params.sb_flow_id as string | undefined };
 }
