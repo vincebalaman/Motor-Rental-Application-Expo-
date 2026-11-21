@@ -6,6 +6,7 @@ export type Booking = {
   id: string; client_id: string; motor_id: string; motor_name: string;
   pickup_date: string; return_date: string; daily_rate_centavos: number; total_centavos: number;
   picked_up_at?: string | null; returned_at?: string | null; picked_up_by?: string | null; returned_by?: string | null;
+  cancelled_at?: string | null; cancelled_by?: string | null; cancellation_source?: 'client' | 'admin' | null; cancellation_reason?: string | null;
   status: BookingStatus; created_at: string; updated_at: string;
 };
 export type AdminBooking = Booking & { client: { id: string; full_name: string; phone: string | null } | null };
@@ -13,6 +14,9 @@ export const ADMIN_BOOKING_PAGE_SIZE = 50;
 export function adminBookingErrorMessage(error: unknown): string {
   const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
   const messages: Record<string, string> = {
+    booking_cancellation_reason_required: 'Enter a cancellation reason using 5–500 characters. The client will see this reason.',
+    booking_cancellation_conflict: 'This booking was already cancelled with a different reason. Refresh to read the recorded decision.',
+    booking_cannot_admin_cancel: 'Only approved bookings that have not been picked up can be cancelled. Refresh to see the current status.',
     booking_invalid_transition: 'This booking has already changed. Refresh the list before recording a handover.',
     booking_pickup_outside_dates: 'Pickup can only be recorded during the approved rental dates, using Philippine time.',
     booking_motor_still_out: 'This motor is still with another client. Confirm its return before recording the next pickup.',
@@ -27,6 +31,11 @@ export function adminBookingErrorMessage(error: unknown): string {
   return messages[message] ?? 'We could not confirm the action. Refresh bookings to check the current status before trying again.';
 }
 export class BookingError extends Error {}
+export function cancellationReason(value: string): string {
+  const reason = value.trim().replace(/\s+/g, ' ');
+  if (Array.from(reason).length < 5 || Array.from(reason).length > 500) throw new BookingError('Enter a cancellation reason using 5–500 characters. The client will see this reason.');
+  return reason;
+}
 const DAY = 86400000;
 export function manilaToday(now = new Date()): string {
   return new Date(now.getTime() + 8 * 3600000).toISOString().slice(0, 10);
@@ -65,6 +74,13 @@ export function bookingErrorMessage(error: unknown): string {
 }
 export function createBookingService(client: SupabaseClient) {
   return {
+    async cancelApproved(id: string, reason: string): Promise<Booking> {
+      const normalized = cancellationReason(reason);
+      const { data, error } = await client.rpc('admin_cancel_approved_booking', { p_booking_id: id, p_reason: normalized });
+      if (error) throw error;
+      if (!data || data.id !== id || data.status !== 'cancelled' || data.cancellation_source !== 'admin' || !data.cancelled_at || data.cancellation_reason !== normalized) throw new BookingError('Cancellation could not be confirmed. Refresh bookings to check the recorded decision.');
+      return data;
+    },
     async handover(id: string, action: 'pickup' | 'return'): Promise<Booking> {
       const { data, error } = await client.rpc('record_motor_handover', { p_booking_id: id, p_action: action });
       if (error) throw error;

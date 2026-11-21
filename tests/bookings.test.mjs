@@ -101,3 +101,26 @@ test('handover uses guarded RPC and requires confirmed lifecycle timestamps', as
   assert.deepEqual(calls, [['record_motor_handover',{ p_booking_id: 'b1', p_action: 'pickup' }], ['record_motor_handover',{ p_booking_id: 'b1', p_action: 'return' }]]);
   for (const response of [null,{ id:'b1',status:'in_use' },{ id:'wrong',status:'in_use',picked_up_at:'time' }]) await assert.rejects(createBookingService({ rpc: async () => ({ data:response,error:null }) }).handover('b1','pickup'));
 });
+
+test('admin cancellation validates and normalizes client-visible reasons before sending', async () => {
+  const { cancellationReason } = await import('../src/services/bookings.ts');
+  assert.equal(cancellationReason('  Motor   needs\ninspection  '),'Motor needs inspection');
+  for(const value of ['', '    ', 'tiny', 'x'.repeat(501)]) assert.throws(()=>cancellationReason(value));
+  const calls=[];
+  const service=createBookingService({rpc:async(name,args)=>{calls.push([name,args]);return {data:{id:args.p_booking_id,status:'cancelled',cancellation_source:'admin',cancelled_at:'2026-11-21T00:00:00Z',cancellation_reason:args.p_reason},error:null};}});
+  await assert.rejects(service.cancelApproved('b1','bad'));
+  assert.equal(calls.length,0);
+  const row=await service.cancelApproved('b1','  Motor needs inspection  ');
+  assert.equal(row.status,'cancelled');
+  assert.deepEqual(calls,[['admin_cancel_approved_booking',{p_booking_id:'b1',p_reason:'Motor needs inspection'}]]);
+});
+test('unconfirmed cancellation never reports success', async()=>{
+  const good={id:'b1',status:'cancelled',cancellation_source:'admin',cancelled_at:'time',cancellation_reason:'Motor needs inspection'};
+  for(const data of [null,{...good,id:'other'},{...good,status:'in_use'},{...good,cancellation_source:'client'},{...good,cancelled_at:null},{...good,cancellation_reason:'Different recorded reason'}]) await assert.rejects(createBookingService({rpc:async()=>({data,error:null})}).cancelApproved('b1','Motor needs inspection'));
+});
+test('cancellation transition errors provide safe retry guidance',async()=>{
+  const { adminBookingErrorMessage }=await import('../src/services/bookings.ts');
+  assert.match(adminBookingErrorMessage({message:'booking_cannot_admin_cancel'}),/not been picked up/);
+  assert.match(adminBookingErrorMessage({message:'booking_cancellation_conflict'}),/already cancelled/);
+  assert.match(adminBookingErrorMessage({message:'booking_cancellation_reason_required'}),/5–500/);
+});

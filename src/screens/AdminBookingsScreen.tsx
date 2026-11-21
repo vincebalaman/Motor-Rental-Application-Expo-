@@ -1,6 +1,6 @@
 import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { dailyPrice } from '@/components/catalog-card';
 import BookingStatusBadge from '@/components/booking-status';
@@ -8,7 +8,7 @@ import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabaseClient } from '@/lib/supabase';
-import { type AdminBooking, adminBookingErrorMessage, createBookingService, manilaToday } from '@/services/bookings';
+import { type AdminBooking, adminBookingErrorMessage, cancellationReason, createBookingService, manilaToday } from '@/services/bookings';
 
 import { type AdminBookingView, adminViewLabels as labels, parseAdminView, parseDashboardDate } from '@/services/admin-dashboard';
 import { formatBookingDate } from '@/services/booking-calendar';
@@ -32,7 +32,8 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [confirmation, setConfirmation] = useState<{ id: string; approve?: boolean; handover?: 'pickup' | 'return' } | null>(null);
+  const [confirmation, setConfirmation] = useState<{ id: string; approve?: boolean; handover?: 'pickup' | 'return'; cancel?: boolean } | null>(null);
+  const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const revision = useRef(0);
   const focused = useRef(false);
@@ -52,6 +53,7 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
       const result = await service.listAdmin(filter, start, operationsDate);
       if (!focused.current || request !== revision.current) return;
       setRows(current => more ? [...current, ...result.bookings.filter(row => !current.some(old => old.id === row.id))] : result.bookings);
+      if (!more) setConfirmation(current => current?.cancel && !result.bookings.some(row => row.id === current.id && row.status === 'approved') ? null : current);
       offset.current = start + result.bookings.length;
       setHasMore(result.hasMore);
     } catch {
@@ -75,15 +77,18 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
   };
   const review = async () => {
     if (!confirmation || running.current) return;
-    const { id, approve, handover } = confirmation;
+    const { id, approve, handover, cancel } = confirmation;
+    if (cancel) { try { cancellationReason(reason); } catch { setActionError('Enter a cancellation reason using 5–500 characters. The client will see this reason.'); return; } }
+    let cancellationFailed = false;
     running.current = true; setBusy(true); setActionError(null); setNotice(null);
     try {
-      const booking = handover ? await service.handover(id, handover) : await service.review(id, approve === true);
-      if (focused.current) setNotice(`${handover ? handover === 'pickup' ? 'Pickup recorded' : 'Return recorded' : approve ? 'Approved' : 'Rejected'}: ${booking.motor_name}.`);
+      const booking = cancel ? await service.cancelApproved(id, reason) : handover ? await service.handover(id, handover) : await service.review(id, approve === true);
+      if (focused.current) setNotice(`${cancel ? 'Booking cancelled' : handover ? handover === 'pickup' ? 'Pickup recorded' : 'Return recorded' : approve ? 'Approved' : 'Rejected'}: ${booking.motor_name}.`);
     } catch (cause) {
+      cancellationFailed = !!cancel;
       if (focused.current) setActionError(adminBookingErrorMessage(cause));
     } finally {
-      running.current = false; setBusy(false); setConfirmation(null);
+      running.current = false; setBusy(false); if (!cancellationFailed) setConfirmation(null);
       // Recheck server state even after a timeout or another admin's decision.
       void load();
     }
@@ -91,7 +96,7 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
 
   return <MainSafe>
     <FlatList
-      data={rows} keyExtractor={item => item.id} refreshing={loading} onRefresh={() => { void load(); }} contentContainerStyle={styles.page}
+      keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets data={rows} keyExtractor={item => item.id} refreshing={loading} onRefresh={() => { void load(); }} contentContainerStyle={styles.page}
       ListHeaderComponent={<View style={styles.header}>
         <Text style={styles.eyebrow}>ADMIN WORKSPACE</Text>
         <Text style={styles.title}>Bookings</Text>
@@ -118,8 +123,19 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
           <Text selectable style={styles.reference}>Reference: {item.id}</Text>
           {!!item.picked_up_at && <Text style={styles.copy}>Picked up: {new Date(item.picked_up_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (PH)</Text>}
           {!!item.returned_at && <Text style={styles.copy}>Returned: {new Date(item.returned_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (PH)</Text>}
-          {item.status === 'in_use' && item.return_date <= manilaToday() && <Text style={styles.error}>Overdue: this motor is still out. Record its actual return before handing it to another client.</Text>}
-          {(item.status === 'approved' || item.status === 'in_use') && <View style={styles.confirmation}>
+          {item.cancellation_source && <View style={styles.confirmation}><Text style={styles.heading}>{item.cancellation_source === 'admin' ? 'Cancelled by rental shop' : 'Cancelled by client'}</Text>{!!item.cancellation_reason && <Text style={styles.copy}>{item.cancellation_reason}</Text>}{!!item.cancelled_at && <Text style={styles.copy}>{new Date(item.cancelled_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (PH)</Text>}</View>}
+          {item.status === 'approved' && confirmation?.id === item.id && confirmation.cancel && <View style={styles.confirmation}>
+            <Text style={styles.heading}>Cancel this approved booking?</Text>
+            <Text style={styles.copy}>This releases the reserved dates and cannot be undone in the app. The client will see your reason. The original total is retained; no payment or refund is processed.</Text>
+            <TextInput accessibilityLabel="Cancellation reason, visible to client" placeholder="Explain why this booking is being cancelled" placeholderTextColor="#85907e" multiline textAlignVertical="top" maxLength={500} value={reason} onChangeText={setReason} editable={!busy} style={styles.reasonInput} />
+            <Text style={styles.copy}>{Array.from(reason).length}/500 characters · Minimum 5</Text>
+            {actionError && <Text style={styles.error}>{actionError}</Text>}
+            <SubmitButton title="CONFIRM CANCELLATION" onPress={() => { void review(); }} isSubmitting={busy} style={styles.reject} />
+            <Pressable accessibilityRole="button" disabled={busy} onPress={() => { setConfirmation(null); setActionError(null); }} style={styles.action}><Text style={styles.chipText}>Keep approved booking</Text></Pressable>
+          </View>}
+          {item.status === 'approved' && !(confirmation?.id === item.id && confirmation.cancel) && <Pressable accessibilityRole="button" disabled={busy} style={[styles.action, styles.rejectOutline]} onPress={() => { setReason(''); setConfirmation({ id: item.id, cancel: true }); setActionError(null); setNotice(null); }}><Text style={styles.error}>Cancel approved booking</Text></Pressable>}
+          {item.status === 'in_use'  && item.return_date <= manilaToday() && <Text style={styles.error}>Overdue: this motor is still out. Record its actual return before handing it to another client.</Text>}
+          {(item.status === 'approved' || item.status === 'in_use') && !(confirmation?.id === item.id && confirmation.cancel) && <View style={styles.confirmation}>
             {confirmation?.id === item.id && confirmation.handover ? <>
               <Text style={styles.heading}>{confirmation.handover === 'pickup' ? 'Confirm motor handover?' : 'Confirm motor returned?'}</Text>
               <Text style={styles.copy}>{confirmation.handover === 'pickup' ? 'Confirm only after the client has received this motor. The pickup time will be recorded.' : 'Confirm only after the motor is physically back with the rental shop. This completes the rental. The original total stays unchanged; fees and refunds are not calculated here.'}</Text>
@@ -146,6 +162,7 @@ function AdminBookings({ initialView, operationsDate }: { initialView: AdminBook
   </MainSafe>;
 }
 const styles = StyleSheet.create({
+  reasonInput: { backgroundColor: '#f3efe6', color: '#21484a', borderWidth: 1, borderColor: '#dce1d3', borderRadius: 12, padding: 14, minHeight: 110, fontSize: 15 },
   page: { padding: 22, gap: 18, paddingBottom: 32, maxWidth: 850, width: '100%', alignSelf: 'center' }, header: { gap: 14 },
   eyebrow: { color: '#526e65', fontSize: 10, fontWeight: '800', letterSpacing: 1.8 }, title: { color: '#183334', fontSize: 32, fontWeight: '800' },
   copy: { color: '#687a75', fontSize: 14, lineHeight: 22 }, filters: { gap: 10 }, chip: { padding: 14, borderRadius: 24, backgroundColor: '#e6eadd' }, chipText: { color: '#21484a', fontWeight: '700' }, selected: { backgroundColor: '#21484a' }, selectedText: { color: '#faf8f2', fontWeight: '700' },

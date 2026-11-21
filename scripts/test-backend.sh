@@ -21,12 +21,14 @@ trap cleanup EXIT INT TERM
   -f supabase/migrations/20261121000100_booking_calendar.sql \
   -f supabase/migrations/20261121000200_rental_handover.sql \
   -f supabase/migrations/20261121000300_admin_dashboard.sql \
+  -f supabase/migrations/20261121000400_admin_booking_cancellation.sql \
   -f supabase/tests/permissions.sql \
   -f supabase/tests/local-import.sql \
   -f supabase/tests/bookings.sql \
   -f supabase/tests/booking-calendar.sql \
   -f supabase/tests/rental-handover.sql \
-  -f supabase/tests/admin-dashboard.sql >"$TEST_ROOT/results.log" 2>&1 || {
+  -f supabase/tests/admin-dashboard.sql \
+  -f supabase/tests/admin-cancellation.sql >"$TEST_ROOT/results.log" 2>&1 || {
     cat "$TEST_ROOT/results.log"
     exit 1
   }
@@ -67,5 +69,13 @@ for HANDOVER_ACTION in pickup return; do
   wait "$SECOND_PID"
 done
 booking_sql -f supabase/tests/handover-concurrent-check.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/tests/cancellation-race-setup.sql >>"$TEST_ROOT/results.log"
+booking_sql -v race_action=cancel -f supabase/tests/cancellation-race.sql >"$TEST_ROOT/cancellation-race-cancel.log" 2>&1 &
+FIRST_PID=$!
+booking_sql -v race_action=pickup -f supabase/tests/cancellation-race.sql >"$TEST_ROOT/cancellation-race-pickup.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
+booking_sql -f supabase/tests/cancellation-race-check.sql >>"$TEST_ROOT/results.log"
 tail -5 "$TEST_ROOT/results.log"
 echo "Local PostgreSQL test logs: $TEST_ROOT"

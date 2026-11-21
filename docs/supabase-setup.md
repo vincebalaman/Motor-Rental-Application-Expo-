@@ -428,3 +428,35 @@ Record pickup/return on another device, refresh Home, and verify remaining-task 
 change. Verify the overdue/return-day boundary, failed load/retry, and client route access.
 SQL tests cover admin permissions, zero values, more than 1000 pending rows, server date,
 all five predicates, and a recorded return removing due/In Use/overdue task counts.
+
+## Admin cancellation of approved bookings
+
+Apply `supabase/migrations/20261121000400_admin_booking_cancellation.sql` once after
+the existing migrations. It adds cancellation attribution and a guarded
+`admin_cancel_approved_booking` RPC. Explore files and inventory UI are unaffected.
+
+In Admin Bookings → Approved, choose Cancel Approved Booking, enter a client-visible
+reason (5–500 normalized characters), and confirm. The operation records the admin ID,
+server timestamp, source, and reason. It releases reserved dates, removes the request
+from actionable dashboard counts, and preserves booking history, dates, and total.
+No payment, refund, or fee is processed. This action cannot be undone in the app.
+
+Only Approved bookings with no recorded pickup can be cancelled this way. Pending
+requests still use rejection, and In Use must be returned rather than cancelled.
+Completed, rejected, or client-cancelled records cannot be overwritten by this action.
+Identical retries return the original admin cancellation without changing its audit;
+a different reason on an already-cancelled record reports a conflict. The cancellation
+and pickup RPCs lock the same motor/booking rows, so only one transition can win.
+
+Clients can read the reason, cancellation source, and time on their own booking details.
+Existing pending cancellation remains available and is recorded as Client, without
+an invented admin reason. Historical cancellations with no attribution stay readable;
+the migration does not backfill guessed actors or reasons. Direct client table writes
+and reads of another client's records remain blocked by the existing grants and RLS.
+
+Device checks: cancel an approved future booking and one beginning today, verify its
+reason and timestamp as the client, confirm dates become available, and refresh admin
+counts. Try blank/short reasons, retry a failed request, open the same booking on two
+admin devices, and race pickup against cancellation. In Use and Completed must never
+be cancellable. Check client pending cancellation still works. Rejection reasons and
+no-show handling remain separate future changes.
