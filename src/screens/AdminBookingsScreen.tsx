@@ -1,4 +1,4 @@
-import { Redirect, useFocusEffect } from 'expo-router';
+import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -8,19 +8,23 @@ import MainSafe from '@/components/mainsafe';
 import SubmitButton from '@/components/submitbtn';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabaseClient } from '@/lib/supabase';
-import { type AdminBooking, type BookingStatus, adminBookingErrorMessage, createBookingService, manilaToday } from '@/services/bookings';
+import { type AdminBooking, adminBookingErrorMessage, createBookingService, manilaToday } from '@/services/bookings';
 
-const labels = { pending: 'Pending', approved: 'Approved', in_use: 'In use', completed: 'Completed', rejected: 'Rejected', cancelled: 'Cancelled' };
+import { type AdminBookingView, adminViewLabels as labels, parseAdminView, parseDashboardDate } from '@/services/admin-dashboard';
+import { formatBookingDate } from '@/services/booking-calendar';
 
 export default function AdminBookingsScreen() {
   const { user } = useAuth();
+  const { view, date } = useLocalSearchParams<{ view?: string; date?: string }>();
+  const initialView = parseAdminView(view);
+  const operationsDate = parseDashboardDate(date) ?? manilaToday();
   if (user?.role !== 'admin') return <Redirect href="/dashboard" />;
-  return <AdminBookings key={user.id} />;
+  return <AdminBookings key={`${user.id}:${initialView}:${operationsDate}`} initialView={initialView} operationsDate={operationsDate} />;
 }
 
-function AdminBookings() {
+function AdminBookings({ initialView, operationsDate }: { initialView: AdminBookingView | null; operationsDate: string }) {
   const service = useMemo(() => createBookingService(getSupabaseClient()), []);
-  const [filter, setFilter] = useState<BookingStatus | null>('pending');
+  const [filter, setFilter] = useState<AdminBookingView | null>(initialView);
   const [rows, setRows] = useState<AdminBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -45,7 +49,7 @@ function AdminBookings() {
     if (more) setLoadingMore(true);
     else { setLoading(true); setLoadingMore(false); }
     try {
-      const result = await service.listAdmin(filter, start);
+      const result = await service.listAdmin(filter, start, operationsDate);
       if (!focused.current || request !== revision.current) return;
       setRows(current => more ? [...current, ...result.bookings.filter(row => !current.some(old => old.id === row.id))] : result.bookings);
       offset.current = start + result.bookings.length;
@@ -55,7 +59,7 @@ function AdminBookings() {
     } finally {
       if (focused.current && request === revision.current) { fetching.current = false; setLoading(false); setLoadingMore(false); }
     }
-  }, [filter, service]);
+  }, [filter, service, operationsDate]);
 
   useFocusEffect(useCallback(() => {
     focused.current = true;
@@ -64,10 +68,10 @@ function AdminBookings() {
     return () => { focused.current = false; subscription.remove(); };
   }, [load]));
 
-  const selectFilter = (value: BookingStatus | null) => {
+  const selectFilter = (value: AdminBookingView | null) => {
     if (running.current || value === filter) return;
     revision.current++; offset.current = 0;
-    setRows([]); setHasMore(false); setConfirmation(null); setActionError(null); setNotice(null); setLoading(true); setFilter(value);
+    setRows([]); setHasMore(false); setConfirmation(null); setActionError(null); setNotice(null); setLoading(true); setFilter(value); router.setParams({ view: value ?? 'all', date: operationsDate });
   };
   const review = async () => {
     if (!confirmation || running.current) return;
@@ -93,13 +97,14 @@ function AdminBookings() {
         <Text style={styles.title}>Bookings</Text>
         <Text style={styles.copy}>Review requests, record handovers, and track motors still out with clients.</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-          {(['pending', 'approved', 'in_use', 'completed', 'rejected', 'cancelled', null] as const).map(value => <Pressable key={value ?? 'all'} accessibilityRole="button" accessibilityState={{ selected: filter === value, disabled: busy }} disabled={busy} onPress={() => selectFilter(value)} style={[styles.chip, filter === value && styles.selected]}><Text style={[styles.chipText, filter === value && styles.selectedText]}>{value ? labels[value] : 'All'}</Text></Pressable>)}
+          {(['pending', 'pickups_today', 'returns_today', 'in_use', 'overdue', 'approved', 'completed', 'rejected', 'cancelled', null] as const).map(value => <Pressable key={value ?? 'all'} accessibilityRole="button" accessibilityState={{ selected: filter === value, disabled: busy }} disabled={busy} onPress={() => selectFilter(value)} style={[styles.chip, filter === value && styles.selected]}><Text style={[styles.chipText, filter === value && styles.selectedText]}>{value ? operationsDate !== manilaToday() && value === 'pickups_today' ? 'Pickups by date' : operationsDate !== manilaToday() && value === 'returns_today' ? 'Returns by date' : labels[value] : 'All'}</Text></Pressable>)}
         </ScrollView>
+        {(filter === 'pickups_today' || filter === 'returns_today' || filter === 'overdue') && <Text style={styles.copy}>Operations date: {formatBookingDate(operationsDate)} (Philippine time){filter === 'overdue' ? '. Includes motors due on this date that are still out.' : ''}</Text>}
         {loadError && <View style={styles.message}><Text accessibilityRole="alert" style={styles.error}>{loadError}</Text><SubmitButton title="RETRY LOADING" onPress={() => { void load(); }} /></View>}
         {actionError && <Text accessibilityRole="alert" style={styles.error}>{actionError}</Text>}
         {notice && <Text accessibilityRole="alert" style={styles.success}>{notice}</Text>}
       </View>}
-      ListEmptyComponent={loading ? <ActivityIndicator color="#21484a" /> : !loadError ? <View style={styles.card}><Text style={styles.heading}>No {filter ? labels[filter].toLowerCase() + ' ' : ''}bookings</Text><Text style={styles.copy}>Pull down to check for new requests.</Text></View> : undefined}
+      ListEmptyComponent={loading ? <ActivityIndicator color="#21484a" /> : !loadError ? <View style={styles.card}><Text style={styles.heading}>No bookings to show</Text><Text style={styles.copy}>Pull down to check for new requests.</Text></View> : undefined}
       renderItem={({ item }) => {
         const expired = item.pickup_date < manilaToday();
         return <View style={styles.card}>
