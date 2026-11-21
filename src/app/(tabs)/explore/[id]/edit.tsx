@@ -1,33 +1,39 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
-  KeyboardTypeOptions,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 
 import MainSafe from '@/components/mainsafe';
-import SubmitButton from '@/components/submitbtn';
+import { MotorField, MotorFormButton, motorFormStyles as styles } from '@/components/motor-form';
 import { useMotorInventory } from '@/context/MotorContext';
-import { inventoryErrorMessage } from '@/services/inventory';
+import { type Motor, inventoryErrorMessage } from '@/services/inventory';
 
 export default function EditMotorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const motorId = Array.isArray(id) ? id[0] : id;
-  const { motors, updateMotor } = useMotorInventory();
-  const motor = motors.find((item) => item.id === motorId);
-  const [originalUpdatedAt] = useState(motor?.updatedAt ?? '');
-  const [name, setName] = useState(motor?.name ?? '');
-  const [type, setType] = useState(motor?.type ?? '');
-  const [price, setPrice] = useState(motor ? String(motor.price) : '');
-  const [description, setDescription] = useState(motor?.description ?? '');
-  const [imagePath, setImagePath] = useState(motor?.imagePath ?? '');
+  const { motors, loading, error, retry } = useMotorInventory();
+  const motor = motors.find(item => item.id === motorId);
+  if (!motor) return <MainSafe><ScrollView contentContainerStyle={styles.content}>
+    <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/explore')} accessibilityRole="button"><Text style={styles.back}>← Back</Text></TouchableOpacity>
+    {loading ? <ActivityIndicator color="#21484a" accessibilityLabel="Loading motor" /> : <View style={styles.panel}><Text style={styles.sectionTitle}>{error ? 'Unable to load motor' : 'Motor not available'}</Text><Text accessibilityRole={error ? 'alert' : undefined} style={styles.subtitle}>{error || 'This motor is no longer listed. Return to the inventory and refresh.'}</Text>{error && <MotorFormButton title="Try again" onPress={retry} tone="outline" />}</View>}
+  </ScrollView></MainSafe>;
+  return <EditMotorForm key={motor.id} motor={motor} motorId={motor.id} />;
+}
+function EditMotorForm({ motor, motorId }: { motor: Motor; motorId: string }) {
+  const { updateMotor } = useMotorInventory();
+  const [originalUpdatedAt] = useState(motor.updatedAt);
+  const [name, setName] = useState(motor.name);
+  const [type, setType] = useState(motor.type);
+  const [price, setPrice] = useState(String(motor.price));
+  const [description, setDescription] = useState(motor.description);
+  const [imagePath, setImagePath] = useState(motor.imagePath);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const submitting = useRef(false);
@@ -72,19 +78,6 @@ export default function EditMotorScreen() {
     }
   };
 
-  if (!motor) {
-    return (
-      <MainSafe>
-        <View style={styles.notFound}>
-          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/explore')} accessibilityRole="button">
-            <Text style={styles.back}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.header}>Motor not found</Text>
-        </View>
-      </MainSafe>
-    );
-  }
-
   return (
     <MainSafe>
       <KeyboardAvoidingView
@@ -94,19 +87,22 @@ export default function EditMotorScreen() {
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         >
-          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/explore')} accessibilityRole="button">
+          <TouchableOpacity disabled={isSubmitting} onPress={() => router.canGoBack() ? router.back() : router.replace('/explore')} accessibilityRole="button">
             <Text style={styles.back}>← Back</Text>
           </TouchableOpacity>
 
+          <Text accessibilityRole="header" style={styles.header}>Edit motor</Text>
+          <Text style={styles.subtitle}>Update this motor’s listing and daily rate.</Text>
           <View style={styles.form}>
-            <Text style={styles.header}>Edit motor</Text>
-            <MotorField editable={!isSubmitting} label="Name" value={name} onChangeText={setName} placeholder="Motor name" />
-            <MotorField editable={!isSubmitting} label="Type" value={type} onChangeText={setType} placeholder="Motor type" />
+            <View style={styles.panel}><Text style={styles.sectionTitle}>Motor details</Text>
+            <MotorField editable={!isSubmitting} label="Motor name" maxLength={120} value={name} onChangeText={setName} placeholder="Motor name" />
+            <MotorField editable={!isSubmitting} label="Motor type" maxLength={60} value={type} onChangeText={setType} placeholder="Motor type" />
             <MotorField
               editable={!isSubmitting}
-              label="Price per day (₱)"
+              label="Daily rate (₱)"
+              hint="The base price for one 24-hour rental day."
               value={price}
               onChangeText={setPrice}
               placeholder="Price"
@@ -115,88 +111,29 @@ export default function EditMotorScreen() {
             <MotorField
               editable={!isSubmitting}
               label="Description"
+              maxLength={5000}
               value={description}
               onChangeText={setDescription}
               placeholder="Describe the motor"
               multiline
             />
+            </View>
+            <View style={styles.panel}><Text style={styles.sectionTitle}>Motor photo</Text>
             <MotorField
               editable={!isSubmitting}
-              label="Image URL or storage path"
+              label="Image link or storage path"
+              hint="Use an HTTPS image link or a path from the motor-images bucket."
               value={imagePath}
               onChangeText={setImagePath}
               placeholder="https://example.com/motor.jpg or motors/photo.jpg"
               keyboardType="url"
             />
+            </View>
             {saveError && <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text>}
-            <SubmitButton title="SAVE CHANGES" onPress={handleSave} isSubmitting={isSubmitting} />
+            <MotorFormButton title="Save changes" onPress={handleSave} busy={isSubmitting} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </MainSafe>
   );
 }
-
-type MotorFieldProps = {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  keyboardType?: KeyboardTypeOptions;
-  multiline?: boolean;
-  editable?: boolean;
-};
-
-function MotorField({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType,
-  multiline = false,
-  editable = true,
-}: MotorFieldProps) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        accessibilityLabel={label}
-        style={[styles.input, multiline && styles.multilineInput]}
-        value={value}
-        editable={editable}
-        autoCapitalize={keyboardType === 'url' ? 'none' : 'sentences'}
-        autoCorrect={keyboardType !== 'url'}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#94a3b8"
-        keyboardType={keyboardType}
-        multiline={multiline}
-        textAlignVertical={multiline ? 'top' : 'center'}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  saveError: { color: '#991b1b', fontSize: 14, lineHeight: 21 },
-  keyboardAvoidingView: { flex: 1 },
-  content: { flexGrow: 1, padding: 24, paddingTop: 32, paddingBottom: 48 },
-  notFound: { flex: 1, padding: 24, paddingTop: 32, gap: 24 },
-  back: { color: '#21484a', fontSize: 16, fontWeight: '600' },
-  form: { gap: 16, paddingVertical: 32 },
-  header: { color: '#0f172a', fontSize: 26, fontWeight: '700', marginBottom: 8 },
-  field: { gap: 6 },
-  label: { color: '#334155', fontSize: 14, fontWeight: '600' },
-  input: {
-    backgroundColor: '#ffffff',
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
-    borderWidth: 1,
-    color: '#0f172a',
-    fontSize: 16,
-    minHeight: 50,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  multilineInput: { minHeight: 110 },
-});
