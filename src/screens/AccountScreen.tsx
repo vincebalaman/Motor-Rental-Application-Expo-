@@ -1,13 +1,22 @@
-import { Link, Redirect } from 'expo-router';
-import { useState } from 'react';
+import { Link, Redirect, router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { dailyPrice } from '@/components/catalog-card';
 import MainSafe from '@/components/mainsafe';
 import { useAuth } from '@/context/AuthContext';
+import { useBookings } from '@/context/BookingContext';
+
+const bookingLabels = { pending: 'Pending approval', approved: 'Approved', rejected: 'Rejected', cancelled: 'Cancelled' };
+const bookingColors = { pending: '#825510', approved: '#21623c', rejected: '#991b1b', cancelled: '#687a75' };
 
 export default function AccountScreen() {
   const { user, loading, logout } = useAuth();
+  const { bookings, loading: bookingsLoading, error: bookingsError, refresh: refreshBookings } = useBookings();
   const [loggingOut, setLoggingOut] = useState(false);
+  useFocusEffect(useCallback(() => {
+    if (user?.role === 'client') refreshBookings();
+  }, [refreshBookings, user?.role]));
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -59,6 +68,72 @@ export default function AccountScreen() {
             <Text style={styles.email}>{user.role === 'admin' ? 'Administrator' : 'Client'}</Text>
           </View>
         </View>
+
+        {user.role === 'client' && (
+          <View style={styles.section}>
+            <View style={styles.historyHeader}>
+              <View style={styles.historyHeading}>
+                <Text style={styles.sectionTitle}>Booking history</Text>
+                <Text style={styles.historySubtitle}>Your recent rides and request status.</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.navigate('/bookings')}
+                style={styles.historyLink}
+              >
+                <Text style={styles.historyLinkText}>View all</Text>
+                <Text style={styles.historyChevron}>›</Text>
+              </Pressable>
+            </View>
+
+            {bookingsError ? (
+              <View style={styles.historyEmpty}>
+                <Text accessibilityRole="alert" style={styles.historyError}>{bookingsError}</Text>
+                <Pressable accessibilityRole="button" onPress={refreshBookings} style={styles.retryButton}>
+                  <Text style={styles.retryText}>Try again</Text>
+                </Pressable>
+              </View>
+            ) : bookingsLoading && !bookings.length ? (
+              <View style={styles.historyLoading}>
+                <ActivityIndicator color="#21484a" accessibilityLabel="Loading booking history" />
+              </View>
+            ) : bookings.length ? (
+              <View style={styles.historyList}>
+                {bookings.slice(0, 3).map(booking => {
+                  const rentalDays = (Date.parse(booking.return_date) - Date.parse(booking.pickup_date)) / 86400000;
+                  return (
+                    <View key={booking.id} style={styles.bookingCard}>
+                      <View style={styles.bookingCardHeader}>
+                        <Text style={[styles.bookingStatus, { color: bookingColors[booking.status] }]}>
+                          {bookingLabels[booking.status]}
+                        </Text>
+                        <Text style={styles.bookingTotal}>{dailyPrice(booking.total_centavos / 100)}</Text>
+                      </View>
+                      <Text style={styles.bookingMotor}>{booking.motor_name}</Text>
+                      <Text style={styles.bookingDates}>
+                        {booking.pickup_date} → {booking.return_date}
+                      </Text>
+                      <Text style={styles.bookingRate}>
+                        {dailyPrice(booking.daily_rate_centavos / 100)} / day · {rentalDays} {rentalDays === 1 ? 'day' : 'days'}
+                      </Text>
+                    </View>
+                  );
+                })}
+                {bookings.length > 3 && (
+                  <Text style={styles.moreBookings}>Showing 3 of {bookings.length} bookings</Text>
+                )}
+              </View>
+            ) : (
+              <View style={styles.historyEmpty}>
+                <Text style={styles.emptyTitle}>No bookings yet</Text>
+                <Text style={styles.historySubtitle}>Your ride requests and their status will appear here.</Text>
+                <Pressable accessibilityRole="button" onPress={() => router.navigate('/explore')} style={styles.exploreButton}>
+                  <Text style={styles.exploreButtonText}>Explore motors →</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account settings</Text>
@@ -123,10 +198,33 @@ const styles = StyleSheet.create({
   avatarText: { color: '#ffffff', fontSize: 21, fontWeight: '800' },
   profileInfo: { flex: 1 },
   profileLabel: { color: '#94a3b8', fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
-  name: { color: '#ffffff', fontSize: 19, fontWeight: '700', marginTop: 5 },
+  name: { color: '#ffffff', fontSize: 19, lineHeight: 25, fontWeight: '700', marginTop: 5, flexShrink: 1 },
   email: { color: '#cbd5e1', fontSize: 14, marginTop: 4 },
-  section: { marginTop: 32 },
+  section: { marginTop: 32, gap: 12 },
   sectionTitle: { color: '#0f172a', fontSize: 18, fontWeight: '800', marginBottom: 12 },
+  historyHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  historyHeading: { flex: 1, minWidth: 180 },
+  historySubtitle: { color: '#687a75', fontSize: 13, lineHeight: 20 },
+  historyLink: { flexDirection: 'row', alignItems: 'center', minHeight: 44, paddingHorizontal: 10, gap: 2 },
+  historyLinkText: { color: '#21484a', fontSize: 14, fontWeight: '800' },
+  historyChevron: { color: '#21484a', fontSize: 22, lineHeight: 26 },
+  historyList: { gap: 10 },
+  bookingCard: { padding: 16, gap: 7, backgroundColor: '#faf8f2', borderWidth: 1, borderColor: '#e1e2d9', borderRadius: 16 },
+  bookingCardHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 12, rowGap: 4 },
+  bookingStatus: { fontSize: 12, fontWeight: '800' },
+  bookingTotal: { color: '#21484a', fontSize: 16, fontWeight: '800' },
+  bookingMotor: { color: '#183334', fontSize: 16, lineHeight: 22, fontWeight: '800' },
+  bookingDates: { color: '#425752', fontSize: 13, lineHeight: 20 },
+  bookingRate: { color: '#687a75', fontSize: 12, lineHeight: 18 },
+  moreBookings: { color: '#687a75', fontSize: 12, textAlign: 'center', paddingTop: 3 },
+  historyEmpty: { padding: 18, gap: 8, backgroundColor: '#faf8f2', borderWidth: 1, borderColor: '#e1e2d9', borderRadius: 16 },
+  historyLoading: { minHeight: 88, justifyContent: 'center', alignItems: 'center', backgroundColor: '#faf8f2', borderRadius: 16 },
+  historyError: { color: '#991b1b', fontSize: 14, lineHeight: 21 },
+  emptyTitle: { color: '#183334', fontSize: 16, fontWeight: '800' },
+  retryButton: { alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#e6eadd' },
+  retryText: { color: '#21484a', fontSize: 13, fontWeight: '800' },
+  exploreButton: { alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center', marginTop: 2, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#e6eadd' },
+  exploreButtonText: { color: '#21484a', fontSize: 13, fontWeight: '800' },
   settingRow: {
     alignItems: 'center',
     backgroundColor: '#ffffff',
