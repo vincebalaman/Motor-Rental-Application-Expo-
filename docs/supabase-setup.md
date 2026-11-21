@@ -159,6 +159,11 @@ SQL Editor. This creates the bookings table, policies, and guarded RPC functions
 Do not rerun the earlier migrations. No new environment variables are needed.
 The publishable key cannot run this migration; apply it from the dashboard.
 
+To enable approved-date visibility in the booking calendar, also run
+`supabase/migrations/20261121000100_approved_booking_availability.sql` after the
+client-bookings migration. It adds a client-only RPC that returns approved pickup and
+return dates for one motor, without exposing other clients' booking details.
+
 One motor listing is one rentable unit. Dates are Philippine calendar dates, entered
 as YYYY-MM-DD. Return is exclusive: Nov 21 to Nov 23 costs two days. Pickup must be
 between today and 365 days ahead; rental duration must be 1–90 days. These initial
@@ -180,24 +185,29 @@ it serializes approvals per motor and rejects overlapping approved ranges. Adjac
 ranges are allowed. Admin clients cannot submit rental requests themselves.
 The client UI does not collect payment or confirm a pending request as reserved.
 
-Device checks after applying the migration:
+Device checks after applying both booking migrations:
 
 1. As a client, open Explore → motor details → Request Booking.
-2. Enter valid pickup/return dates. Check day count and total; submit. Verify Pending
+2. Choose pickup and return dates in the calendar. Approved dates appear unavailable;
+   pending requests do not reserve dates. Check day count and total; submit. Verify Pending
    in My Bookings, close/reopen the app, and verify the request remains.
-3. Try invalid dates, past pickup, and identical dates. They must fail. Submit the same
+3. Confirm an admin approval, then open the same motor as another client and verify its
+   approved dates are unavailable. Adjacent dates remain selectable because return is exclusive.
+4. Try past dates and return dates before pickup or beyond 90 days. They must be unavailable.
+   Submit the same
    active dates twice: there must be one active booking, not duplicate charges/requests.
-4. Cancel a pending request and check Cancelled after refreshing/restarting.
-5. Log in as a second client: the first client's bookings must not appear.
-6. Verify request totals preserve the original rate after an admin edits that motor.
-7. Check failed network actions and pull-to-refresh. The app must offer retry/check
+5. Cancel a pending request and check Cancelled after refreshing/restarting.
+6. Log in as a second client: the first client's booking details must not appear, only
+   approved date ranges for the selected motor.
+7. Verify request totals preserve the original rate after an admin edits that motor.
+8. Check failed network actions and availability reload. The app must offer retry/check
    history rather than silently reporting success.
 
 `npm test` covers booking date/money/request handling. `npm run test:backend` also
-checks database permissions, price snapshots, cancellation, overlapping/adjacent
-ranges, concurrent duplicate submissions, and simultaneous overlapping approvals in
-an isolated PostgreSQL instance. Hosted migration application and the device checks
-remain manual; pickup/return and payment are separate work.
+checks database permissions, price snapshots, cancellation, approved-date visibility,
+overlapping/adjacent ranges, concurrent duplicate submissions, and simultaneous
+overlapping approvals in an isolated PostgreSQL instance. Hosted migration application
+and device checks remain manual; payment is separate work.
 
 
 ## Admin booking management

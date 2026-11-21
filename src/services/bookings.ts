@@ -6,6 +6,7 @@ export type Booking = {
   pickup_date: string; return_date: string; daily_rate_centavos: number; total_centavos: number;
   status: BookingStatus; created_at: string; updated_at: string;
 };
+export type ApprovedDateRange = { pickup_date: string; return_date: string };
 export type AdminBooking = Booking & { client: { id: string; full_name: string; phone: string | null } | null };
 export const ADMIN_BOOKING_PAGE_SIZE = 50;
 export function adminBookingErrorMessage(error: unknown): string {
@@ -24,6 +25,30 @@ export class BookingError extends Error {}
 const DAY = 86400000;
 export function manilaToday(now = new Date()): string {
   return new Date(now.getTime() + 8 * 3600000).toISOString().slice(0, 10);
+}
+export function addCalendarDays(value: string, days: number): string {
+  const date = dateValue(value);
+  if (!Number.isSafeInteger(days)) throw new BookingError('The selected date is invalid.');
+  return new Date(date + days * DAY).toISOString().slice(0, 10);
+}
+export function hasApprovedDateConflict(pickup: string, returned: string, approved: ApprovedDateRange[]): boolean {
+  return approved.some(range => pickup < range.return_date && returned > range.pickup_date);
+}
+export function calendarMonthDays(month: string): (string | null)[] {
+  const date = dateValue(month);
+  const parsed = new Date(date);
+  const year = parsed.getUTCFullYear(), monthIndex = parsed.getUTCMonth();
+  const leadingDays = new Date(Date.UTC(year, monthIndex, 1)).getUTCDay();
+  const monthLength = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  return [
+    ...Array<string | null>(leadingDays).fill(null),
+    ...Array.from({ length: monthLength }, (_, index) =>
+      new Date(Date.UTC(year, monthIndex, index + 1)).toISOString().slice(0, 10)),
+  ];
+}
+export function formatCalendarMonth(value: string): string {
+  const date = dateValue(value);
+  return new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
 }
 function dateValue(value: string): number {
   const time = Date.parse(`${value}T00:00:00Z`);
@@ -51,14 +76,37 @@ export function bookingErrorMessage(error: unknown): string {
     booking_not_pending: 'This request is no longer pending. Refresh My Bookings to see its current status.',
     booking_not_found: 'This booking could not be found for your account.',
     booking_client_required: 'Log in with a client account to request a booking.',
+    booking_availability_unavailable: 'Approved dates could not be loaded. Refresh availability before choosing dates.',
   };
   if (messages[message]) return messages[message];
   const code = error && typeof error === 'object' && 'code' in error ? error.code : '';
-  if (['42P01', 'PGRST202', 'PGRST205'].includes(String(code))) return 'Bookings are not enabled on the server yet. Please try again after setup is complete.';
+  if (code === 'PGRST202') return 'Booking availability is not enabled. Apply the latest Supabase migration, then reload this screen.';
+  if (['42P01', 'PGRST205'].includes(String(code))) return 'Bookings are not enabled on the server yet. Please try again after setup is complete.';
   return 'We could not confirm this change. Check My Bookings and refresh before trying again.';
 }
 export function createBookingService(client: SupabaseClient) {
   return {
+    async approvedAvailability(motorId: string, from: string, to: string): Promise<ApprovedDateRange[]> {
+      dateValue(from);
+      dateValue(to);
+      if (!motorId || dateValue(to) <= dateValue(from) || dateValue(to) - dateValue(from) > 456 * DAY) {
+        throw new BookingError('The availability date range is invalid.');
+      }
+      const { data, error } = await client.rpc('list_approved_motor_dates', {
+        p_motor_id: motorId, p_from_date: from, p_to_date: to,
+      });
+      if (error) throw error;
+      if (!Array.isArray(data)) throw new BookingError('Approved dates could not be loaded.');
+      return data.map((range: ApprovedDateRange) => {
+        if (!range || typeof range.pickup_date !== 'string' || typeof range.return_date !== 'string') {
+          throw new BookingError('Approved dates could not be loaded.');
+        }
+        dateValue(range.pickup_date);
+        dateValue(range.return_date);
+        if (range.return_date <= range.pickup_date) throw new BookingError('Approved dates could not be loaded.');
+        return { pickup_date: range.pickup_date, return_date: range.return_date };
+      });
+    },
     async listAdmin(status: BookingStatus | null, offset = 0): Promise<{ bookings: AdminBooking[]; hasMore: boolean }> {
       let query = client.from('bookings').select('*').order('created_at', { ascending: false }).order('id', { ascending: false });
       if (status) query = query.eq('status', status);

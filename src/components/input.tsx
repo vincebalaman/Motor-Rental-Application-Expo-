@@ -1,26 +1,22 @@
-import { type ComponentPropsWithRef, type ComponentRef, useImperativeHandle, useRef } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, type TextInputProps, type StyleProp, type ViewStyle, TouchableOpacity } from 'react-native';
+import { type ComponentPropsWithoutRef, type ComponentRef, forwardRef } from 'react';
+import { StyleSheet, Text, TextInput, type StyleProp, type ViewStyle, TouchableOpacity, View } from 'react-native';
 
-type InputProps = TextInputProps & {
+type InputProps = ComponentPropsWithoutRef<typeof TextInput> & {
   containerStyle?: StyleProp<ViewStyle>;
   type?: 'password';
   isHidden?: boolean;
   togglePasswordVisibility?: () => void;
 };
 
-export default function Input({ ref, type, isHidden = true, togglePasswordVisibility, containerStyle, style, secureTextEntry, ...props }: InputProps) {
-  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
-  useImperativeHandle(ref, () => inputRef.current!, []);
+const Input = forwardRef<ComponentRef<typeof TextInput>, InputProps>(function Input(
+  { type, isHidden = true, togglePasswordVisibility, containerStyle, style, secureTextEntry, ...props },
+  ref,
+) {
   return (
-    <Pressable
-      accessible={false}
-      style={[styles.container, containerStyle]}
-      onPress={() => { if (props.editable !== false) inputRef.current?.focus(); }}
-    >
+    <View style={[styles.container, containerStyle]}>
       <TextInput
-        ref={ref}
         {...props}
-        ref={inputRef}
+        ref={ref}
         accessibilityLabel={props.accessibilityLabel ?? props.placeholder}
         underlineColorAndroid="transparent"
         style={[styles.input, style]}
@@ -37,7 +33,7 @@ export default function Input({ ref, type, isHidden = true, togglePasswordVisibi
           <Text>{isHidden ? 'Show' : 'Hide'}</Text>
         </TouchableOpacity>
       )}
-    </Pressable>
+    </View>
   );
 });
 

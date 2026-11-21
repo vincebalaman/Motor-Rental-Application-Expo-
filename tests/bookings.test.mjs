@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bookingErrorMessage, createBookingService, manilaToday, rentalDays } from '../src/services/bookings.ts';
+import { addCalendarDays, bookingErrorMessage, calendarMonthDays, createBookingService, formatCalendarMonth, hasApprovedDateConflict, manilaToday, rentalDays } from '../src/services/bookings.ts';
 test('Manila day changes at 16:00 UTC, independently of device timezone', () => {
   assert.equal(manilaToday(new Date('2026-11-20T15:59:59Z')), '2026-11-20');
   assert.equal(manilaToday(new Date('2026-11-20T16:00:00Z')), '2026-11-21');
@@ -9,6 +9,19 @@ test('rental uses exclusive return date and exact calendar days', () => {
   assert.equal(rentalDays('2028-02-28', '2028-03-01', '2028-02-28'), 2);
   assert.equal(rentalDays('2026-12-31', '2027-01-01', '2026-11-20'), 1);
   assert.equal(rentalDays('2026-11-20', '2027-02-18', '2026-11-20'), 90);
+});
+test('calendar utilities generate timezone-independent dates and handle exclusive booking boundaries', () => {
+  assert.equal(addCalendarDays('2028-02-28', 2), '2028-03-01');
+  assert.equal(formatCalendarMonth('2028-02-01'), 'February 2028');
+  const february = calendarMonthDays('2028-02-01');
+  assert.equal(february[0], null);
+  assert.equal(february[1], null);
+  assert.equal(february[2], '2028-02-01');
+  assert.equal(february.at(-1), '2028-02-29');
+  const approved = [{ pickup_date: '2026-12-10', return_date: '2026-12-12' }];
+  assert.equal(hasApprovedDateConflict('2026-12-09', '2026-12-10', approved), false);
+  assert.equal(hasApprovedDateConflict('2026-12-09', '2026-12-11', approved), true);
+  assert.equal(hasApprovedDateConflict('2026-12-12', '2026-12-13', approved), false);
 });
 test('rejects invalid dates, reversed ranges, past pickup and policy boundaries', () => {
   for (const [start, end] of [['2026-02-30', '2026-03-02'], ['2026-2-03', '2026-03-02'], ['bad','2026-12-01'], ['2026-11-19','2026-11-21'], ['2026-11-20','2026-11-20'], ['2026-11-21','2026-11-20'], ['2026-11-20','2027-02-19'], ['2027-11-21','2027-11-22']]) assert.throws(() => rentalDays(start, end, '2026-11-20'));
@@ -28,6 +41,25 @@ test('cancellation uses guarded RPC rather than direct table writes', async () =
   const service = createBookingService({ rpc: async (...args) => { calls.push(args); return { data: { id: 'booking', status: 'cancelled' }, error: null }; } });
   assert.equal((await service.cancel('booking')).status, 'cancelled');
   assert.deepEqual(calls, [['cancel_motor_booking', { p_booking_id: 'booking' }]]);
+});
+test('availability calls the redacted approved-dates RPC with a bounded date range', async () => {
+  const calls = [];
+  const approved = [{ pickup_date: '2026-12-10', return_date: '2026-12-12' }];
+  const service = createBookingService({ rpc: async (...args) => { calls.push(args); return { data: approved, error: null }; } });
+  assert.deepEqual(await service.approvedAvailability('motor', '2026-12-01', '2027-03-01'), approved);
+  assert.deepEqual(calls, [['list_approved_motor_dates', {
+    p_motor_id: 'motor', p_from_date: '2026-12-01', p_to_date: '2027-03-01',
+  }]]);
+  await assert.rejects(service.approvedAvailability('motor', 'bad', '2027-03-01'));
+  await assert.rejects(service.approvedAvailability('motor', '2026-12-01', '2028-12-01'));
+  assert.equal(calls.length, 1);
+});
+test('malformed availability responses fail closed', async () => {
+  await assert.rejects(
+    createBookingService({ rpc: async () => ({ data: [{ pickup_date: '2026-02-30', return_date: '2026-03-02' }], error: null }) })
+      .approvedAvailability('motor', '2026-12-01', '2027-03-01'),
+  );
+  assert.match(bookingErrorMessage({ code: 'PGRST202' }), /latest Supabase migration/);
 });
 test('list scopes query to client and orders newest first', async () => {
   const calls = [];
