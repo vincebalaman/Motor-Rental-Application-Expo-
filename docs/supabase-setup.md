@@ -671,3 +671,49 @@ Checks: `npm test`, `npx tsc --noEmit`, ESLint, platform exports, and the isolat
 `npm run test:backend` suite include owner/other-client/admin privacy checks.
 Device check with two accounts: save a picture, reopen Account and log in on a
 second device; verify persistence, replace/cancel, and test an upload offline.
+
+## Booking payment rollout
+
+Payment records, guarded cash confirmation and PayMongo test-mode checkout are
+implemented in `20261127000100_booking_payments.sql`, applied after profile photos.
+This migration and the new Edge Functions have not been applied to the hosted
+project by the code change. Follow [payment setup](payments-setup.md) for the full
+merchant account, server secrets, webhook and test checklist. The real provider UI remains disabled until configured. The app now defaults to an
+account-free educational checkout instead; see [demo payments](demo-payments.md).
+Demo results are local simulations and never count as real money.
+
+## Delete individual notifications
+
+Apply `supabase/migrations/20261127000200_notification_deletion.sql` after the
+booking-notifications migration (008). It does not require the optional payment
+migration or PayMongo configuration. Then reload the app and open Notifications →
+Delete → Confirm delete. Keep cancels the confirmation.
+
+Deletion dismisses the current user's alert, removes it from the inbox/direct RLS
+reads, and excludes it from unread counts and mark-read operations. The row's
+unique event key is retained so periodic reminder creation cannot recreate a
+deleted alert. The booking, other recipients' alerts and audit data are unchanged.
+Only the authenticated recipient in its current role can invoke the scoped RPC;
+admins have no override to delete another user's alerts. Matching retries are safe.
+On a network failure, refresh to check whether deletion committed before retrying.
+
+Checks cover client/admin/guest privacy, malformed IDs/responses, unread count,
+read-all behavior, deduplication after reminder checks, and unchanged booking state.
+
+## Remove closed client booking history
+
+Apply `supabase/migrations/20261127000300_booking_history_deletion.sql` in the SQL
+Editor, then reload the app. It adds client_history_hidden_at and an owner-scoped
+hide_booking_history RPC; it does not depend on payment or notification deletion
+setup. Under My Bookings → History, completed/cancelled/rejected/no-show entries
+have Delete from history → Confirm delete / Keep controls. Past pending or approved
+requests must be resolved first; in-use rentals cannot be hidden.
+
+This removes an entry from that client's History list across devices. It does not
+physically delete a booking, cancel a reservation, change prices or remove payment
+records. Admin lists and owner detail links retain the record. The backend checks
+the current role, owner and terminal status under a booking lock. Matching retries
+preserve the original hidden timestamp; clients have no direct update/delete grant.
+Upcoming/current rentals remain visible even if an older record has a hidden flag.
+Tests cover ownership, anonymous/admin denial, terminal-state rules, retry behavior,
+list filtering, retained records and unchanged active-rental visibility.

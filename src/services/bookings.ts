@@ -12,6 +12,7 @@ export type Booking = {
   no_show_at?: string | null; no_show_by?: string | null; no_show_reason?: string | null;
   rejected_at?: string | null; rejected_by?: string | null; rejection_reason?: string | null;
   cancelled_at?: string | null; cancelled_by?: string | null; cancellation_source?: 'client' | 'admin' | null; cancellation_reason?: string | null;
+  client_history_hidden_at?: string | null;
   status: BookingStatus; created_at: string; updated_at: string;
 };
 export type AdminBooking = Booking & { client: { id: string; full_name: string; phone: string | null } | null };
@@ -115,6 +116,16 @@ export function createBookingService(client: SupabaseClient) {
       const { data, error } = await client.rpc('record_motor_handover', { p_booking_id: id, p_action: action });
       if (error) throw error;
       if (!data || data.id !== id || data.status !== (action === 'pickup' ? 'in_use' : 'completed') || !data.picked_up_at || (action === 'return' && !data.returned_at)) throw new BookingError('The handover could not be confirmed. Refresh bookings.');
+      return data;
+    },
+    async hideHistory(id: string): Promise<{ id: string; client_id: string; hidden_at: string }> {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new BookingError('Invalid booking reference.');
+      const { data, error } = await client.rpc('hide_booking_history', { p_booking_id: id });
+      if (error) {
+        if (error.message === 'booking_history_not_closed') throw new BookingError('Only completed, cancelled, rejected or no-show bookings can be removed. Resolve open bookings first.');
+        throw error;
+      }
+      if (!data || data.id !== id || typeof data.client_id !== 'string' || !data.client_id || typeof data.hidden_at !== 'string' || !Number.isFinite(Date.parse(data.hidden_at))) throw new BookingError('Removal could not be confirmed. Refresh your history before trying again.');
       return data;
     },
     async get(clientId: string, bookingId: string): Promise<Booking | null> {

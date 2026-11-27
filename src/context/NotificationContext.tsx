@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getSupabaseClient } from '@/lib/supabase';
 import { type AppNotification, type NotificationCursor, createNotificationService, mergeNotificationRefresh, notificationErrorMessage } from '@/services/notifications';
 
-type Value = { items: AppNotification[]; unread: number; loading: boolean; loadingMore: boolean; hasMore: boolean; error: string | null; refreshing: boolean; mutating: boolean; refresh: () => Promise<void>; loadMore: () => Promise<void>; markRead: (id: string) => Promise<void>; markAllRead: () => Promise<void> };
+type Value = { items: AppNotification[]; unread: number; loading: boolean; loadingMore: boolean; hasMore: boolean; error: string | null; refreshing: boolean; mutating: boolean; refresh: () => Promise<void>; loadMore: () => Promise<void>; markRead: (id: string) => Promise<void>; remove: (id: string) => Promise<void>; markAllRead: () => Promise<void> };
 const Context = createContext<Value | null>(null);
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -71,6 +71,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } catch (cause) { if (active.current) setError(notificationErrorMessage(cause)); throw cause; }
     finally { changing.current = false; if (active.current) setMutating(false); }
   }, [role, service, userId]);
+  const remove = useCallback(async (id: string) => {
+    if (!service || !active.current || changing.current) throw new Error('Wait for the current notification action.');
+    changing.current = true; setMutating(true); version.current++; fetching.current = false; setLoading(false); setLoadingMore(false); setError(null);
+    try {
+      const result = await service.remove(id);
+      if (result.recipient_id !== userId || result.audience !== role) throw new Error('Account changed.');
+      if (active.current) { currentItems.current = currentItems.current.filter(item => item.id !== result.id); setItems(currentItems.current); setUnread(result.unread_count); }
+    } catch (cause) { if (active.current) setError(notificationErrorMessage(cause)); throw cause; }
+    finally { changing.current = false; if (active.current) setMutating(false); }
+  }, [role, service, userId]);
   const markAllRead = useCallback(async () => {
     if (!service || !active.current || changing.current) return;
     changing.current = true; setMutating(true); version.current++; fetching.current = false; setLoading(false); setLoadingMore(false); setError(null);
@@ -83,7 +93,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } catch (cause) { if (active.current) setError(notificationErrorMessage(cause)); throw cause; }
     finally { changing.current = false; if (active.current) setMutating(false); }
   }, [service]);
-  return <Context.Provider value={{ items, unread, loading, loadingMore, refreshing: loading, hasMore, error, mutating, refresh, loadMore, markRead, markAllRead }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ items, unread, loading, loadingMore, refreshing: loading, hasMore, error, mutating, refresh, loadMore, markRead, remove, markAllRead }}>{children}</Context.Provider>;
 }
 export function useNotifications() {
   const value = useContext(Context);

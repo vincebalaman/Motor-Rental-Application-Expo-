@@ -55,3 +55,17 @@ test('background refresh preserves loaded history and replaces read-state on ove
   assert.deepEqual(mergeNotificationRefresh(current,[]),{items:[],retainedHistory:false});
   assert.deepEqual(mergeNotificationRefresh(current,[{...next,id:user}]),{items:[{...next,id:user}],retainedHistory:false});
 });
+
+test('delete validates ID and confirms recipient, role and server unread count', async () => {
+  const calls=[];const result={id,recipient_id:user,audience:'client',unread_count:0};
+  const service=createNotificationService({rpc:async(...args)=>{calls.push(args);return{data:result,error:null};}});
+  assert.deepEqual(await service.remove(id),result);
+  assert.deepEqual(calls,[['delete_notification',{p_notification_id:id}]]);
+  await assert.rejects(service.remove('bad'));
+  assert.equal(calls.length,1);
+  for(const data of [null,{...result,id:booking},{...result,recipient_id:'bad'},{...result,audience:'guest'},{...result,unread_count:-1}])await assert.rejects(createNotificationService({rpc:async()=>({data,error:null})}).remove(id));
+});
+test('failed notification deletion propagates instead of claiming success',async()=>{
+  const failure={code:'42501',message:'notification_not_found'};
+  await assert.rejects(createNotificationService({rpc:async()=>({data:null,error:failure})}).remove(id),cause=>cause===failure);
+});

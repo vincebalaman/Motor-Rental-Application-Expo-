@@ -5,12 +5,12 @@ Forgot Password now requests a Supabase reset email. The callback verifies a PKC
 ## Configure Supabase
 
 1. Open Authentication → URL Configuration → Redirect URLs in the Supabase dashboard.
-2. Open Forgot Password in the running app. In development, copy the return URL shown below the form and add it to Redirect URLs.
+2. For Expo Go, take the exp://host:port URL printed by the current Expo terminal and append /--/auth/reset-password. Add that full URL to Redirect URLs. The app generates this same destination automatically; setup instructions are not shown in the user-facing form.
 3. The current SDK adds an `sb_flow_id` query parameter for PKCE requests. Also allow the same callback followed by `?**` to match that query string. Keep the host and callback path specific. For example, for a native build add both `motorrentalexpo://auth/reset-password` and `motorrentalexpo://auth/reset-password?**`.
 4. Leave the recovery email template using Supabase's `{{ .ConfirmationURL }}` link. A custom template pointing directly at the app without Supabase verification will not work.
 5. Check Authentication email delivery settings. Configure custom SMTP for sending beyond Supabase's built-in test email restrictions. The publishable app key cannot configure these dashboard settings.
 
-Expo Go generates a URL such as `exp://192.168.x.x:8081/--/auth/reset-password`. Copy the actual displayed URL; the computer address may change. Add its query-string pattern too. Keep Metro running and the phone able to reach it. Use an installed development/release build with the configured `motorrentalexpo` scheme for a stable native callback. A web build needs its own HTTPS callback in the allowlist.
+Expo Go generates a URL such as `exp://192.168.x.x:8081/--/auth/reset-password`. Use the actual host and port printed in the Expo terminal; the computer address may change. Add its query-string pattern too. Keep Metro running and the phone able to reach it. Use an installed development/release build with the configured `motorrentalexpo` scheme for a stable native callback. A web build needs its own HTTPS callback in the allowlist.
 
 `EXPO_PUBLIC_RECOVERY_REDIRECT_URL` optionally overrides the generated URL. Use it only when the URL opens the same app/browser storage that requested the reset. Restart Metro after environment changes. Do not force the native scheme while using Expo Go.
 
@@ -44,3 +44,30 @@ specific current return URL/query pattern is allowed, and the newest link return
 to the same app installation. An `access_token`/`refresh_token` callback is an old
 implicit format; request a fresh PKCE link from the current app. A code with an
 expired/verifier error requires a fresh request without clearing app storage.
+
+
+## Stable return address versus Expo Go
+
+The installed MotorRent app already registers `motorrentalexpo`. Its fixed callback
+is `motorrentalexpo://auth/reset-password`; allow that URL and
+`motorrentalexpo://auth/reset-password?**` in Supabase. This works across networks
+on devices with the app installed. Request and open the recovery link in the same
+installation; it does not open this project inside Expo Go.
+
+Expo Go needs the current Metro server address plus `/--/auth/reset-password`.
+There is no single project callback that reliably targets every changing Expo Go
+host/port. Keep Metro reachable, update the specific allowlist entries when its
+address changes, and leave EXPO_PUBLIC_RECOVERY_REDIRECT_URL unset for Expo Go.
+The app already passes its generated return address to resetPasswordForEmail.
+Do not replace this with localhost on a real phone.
+
+A browser opening the Supabase verification URL first is expected. It must verify
+the email link before redirecting into the app. Ending at localhost usually points
+to the configured Site URL fallback, a non-matching callback allowlist, a stale
+fixed override, or an email template using SiteURL instead of ConfirmationURL.
+Check those dashboard settings, keep the reset email anchor as
+`<a href="{{ .ConfirmationURL }}">Reset password</a>`, then request a new email.
+Changing local code cannot update the hosted dashboard or previously sent emails.
+For a public HTTPS address that opens an installed app, a separately configured
+owned domain plus Android App Links / iOS Universal Links is needed; that setup is
+not provided by Expo Go and has not been added to this project.
