@@ -96,3 +96,22 @@ test('mixed legacy and timed bookings sort by Philippine pickup instant across U
   const records = [booking({ id: 'timed', scheduled_pickup_at: '2026-11-21T16:30:00Z' }), booking({ id: 'legacy' })];
   assert.deepEqual(bookingsInSection(records, 'upcoming', today, Date.parse('2026-11-21T00:00Z')).map(row => row.id), ['legacy','timed']);
 });
+
+test('removed history stays out of client history without hiding active rentals', async () => {
+  const { canRemoveBookingHistory, homeBooking } = await import('../src/services/booking-history.ts');
+  const removed=booking({status:'completed',client_history_hidden_at:'2026-11-21T00:00:00Z'});
+  assert.deepEqual(bookingsInSection([removed], 'history', today), []);
+  for(const status of ['completed','cancelled','rejected','no_show'])assert.equal(canRemoveBookingHistory(booking({status})),true);
+  for(const status of ['pending','approved','in_use'])assert.equal(canRemoveBookingHistory(booking({status})),false);
+  const active=booking({status:'in_use',client_history_hidden_at:'2026-11-21T00:00:00Z'});
+  assert.equal(bookingsInSection([active], 'upcoming', today).length,1);
+  assert.equal(homeBooking([active],today).id,active.id);
+});
+test('history removal confirms the same owner/reference and server timestamp',async()=>{
+ const id='00000000-0000-0000-0000-000000000099';const result={id,client_id:'owner',hidden_at:'2026-11-27T10:00:00Z'};const calls=[];
+ const service=createBookingService({rpc:async(...args)=>{calls.push(args);return{data:result,error:null};}});
+ assert.deepEqual(await service.hideHistory(id),result);assert.deepEqual(calls,[['hide_booking_history',{p_booking_id:id}]]);
+ await assert.rejects(service.hideHistory('bad'));assert.equal(calls.length,1);
+ for(const data of [null,{...result,id:'other'},{...result,hidden_at:'bad'},{...result,client_id:null}])await assert.rejects(createBookingService({rpc:async()=>({data,error:null})}).hideHistory(id));
+ await assert.rejects(createBookingService({rpc:async()=>({data:null,error:{message:'booking_history_not_closed'}})}).hideHistory(id),/Resolve open bookings first/);
+});

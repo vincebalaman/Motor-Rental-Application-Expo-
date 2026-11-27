@@ -41,6 +41,13 @@ export function createNotificationService(client: SupabaseClient) {
       if (!data || !validNotification(data.item) || data.item.id !== id || !data.item.read_at || !count(data.unread_count)) throw new Error('Read status could not be confirmed.');
       return data;
     },
+    async remove(id: string): Promise<{ id: string; recipient_id: string; audience: 'client' | 'admin'; unread_count: number }> {
+      if (!UUID.test(id)) throw new Error('Invalid notification.');
+      const { data, error } = await client.rpc('delete_notification', { p_notification_id: id });
+      if (error) throw error;
+      if (!data || data.id !== id || typeof data.recipient_id !== 'string' || !UUID.test(data.recipient_id) || !['client','admin'].includes(data.audience) || !count(data.unread_count)) throw new Error('Notification deletion could not be confirmed.');
+      return data;
+    },
     async markAllRead(): Promise<{ read_at: string; unread_count: number }> {
       const { data, error } = await client.rpc('mark_all_notifications_read');
       if (error) throw error;

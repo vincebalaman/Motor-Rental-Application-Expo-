@@ -1,0 +1,9 @@
+project_id = "motorrent"
+
+# These public endpoints implement their own auth/signature verification.
+[functions.create-checkout]
+verify_jwt = false
+[functions.paymongo-webhook]
+verify_jwt = false
+[functions.payment-return]
+verify_jwt = false

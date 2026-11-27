@@ -132,5 +132,25 @@ booking_sql -f supabase/migrations/20261121000900_profile_photos.sql -f supabase
   tail -80 "$TEST_ROOT/results.log"
   exit 1
 }
+booking_sql -f supabase/migrations/20261127000100_booking_payments.sql -f supabase/tests/payments.sql >>"$TEST_ROOT/results.log" 2>&1 || {
+  tail -80 "$TEST_ROOT/results.log"
+  exit 1
+}
+booking_sql -f supabase/tests/payments-concurrent-setup.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/tests/payments-concurrent.sql >"$TEST_ROOT/payment-1.log" 2>&1 &
+FIRST_PID=$!
+booking_sql -f supabase/tests/payments-concurrent.sql >"$TEST_ROOT/payment-2.log" 2>&1 &
+SECOND_PID=$!
+wait "$FIRST_PID"
+wait "$SECOND_PID"
+booking_sql -f supabase/tests/payments-concurrent-check.sql >>"$TEST_ROOT/results.log"
+booking_sql -f supabase/migrations/20261127000200_notification_deletion.sql -f supabase/tests/notification-deletion.sql >>"$TEST_ROOT/results.log" 2>&1 || {
+  tail -80 "$TEST_ROOT/results.log"
+  exit 1
+}
+booking_sql -f supabase/migrations/20261127000300_booking_history_deletion.sql -f supabase/tests/booking-history-deletion.sql >>"$TEST_ROOT/results.log" 2>&1 || {
+  tail -80 "$TEST_ROOT/results.log"
+  exit 1
+}
 tail -5 "$TEST_ROOT/results.log"
 echo "Local PostgreSQL test logs: $TEST_ROOT"

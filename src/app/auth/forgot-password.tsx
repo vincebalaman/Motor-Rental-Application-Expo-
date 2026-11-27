@@ -47,10 +47,7 @@ export default function ForgotPasswordScreen() {
             </View>
           ) : <SubmitButton title="SEND RESET LINK" onPress={send} isSubmitting={busy} />}
           <Link href="/auth/login" replace style={styles.link}>Return to login</Link>
-          {__DEV__ && <View style={styles.panel}>
-            <Text style={styles.copy}>Development setup: add this return URL to Supabase → Authentication → URL Configuration → Redirect URLs.</Text>
-            <Text selectable style={styles.copy}>{redirectTo}</Text>
-          </View>}
+
         </ScrollView>
       </KeyboardAvoidingView>
     </MainSafe>

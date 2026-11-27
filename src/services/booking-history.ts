@@ -15,7 +15,7 @@ export function bookingStatusText(booking: Booking, today: string, now = Date.no
   return `${past ? 'Past · ' : ''}${bookingStatusLabels[booking.status]}`;
 }
 export function bookingsInSection(bookings: Booking[], section: BookingSection, today: string, now = Date.now()): Booking[] {
-  return bookings.filter(booking => bookingSection(booking, today, now) === section).sort((a, b) => section === 'upcoming'
+  return bookings.filter(booking => bookingSection(booking, today, now) === section && (section !== 'history' || !booking.client_history_hidden_at)).sort((a, b) => section === 'upcoming'
     ? Date.parse(a.scheduled_pickup_at ?? `${a.pickup_date}T00:00:00+08:00`) - Date.parse(b.scheduled_pickup_at ?? `${b.pickup_date}T00:00:00+08:00`) || b.created_at.localeCompare(a.created_at)
     : b.updated_at.localeCompare(a.updated_at) || b.created_at.localeCompare(a.created_at));
 }
@@ -32,4 +32,8 @@ export function homeBooking(bookings: Booking[], today: string, now = Date.now()
 
 export function canMarkNoShow(booking: Booking, today: string, now = Date.now()): boolean {
   return booking.status === 'approved' && !booking.picked_up_at && bookingTimePassed(booking, 'pickup', today, now);
+}
+
+export function canRemoveBookingHistory(booking: Booking): boolean {
+  return !booking.client_history_hidden_at && ['completed', 'cancelled', 'rejected', 'no_show'].includes(booking.status);
 }
